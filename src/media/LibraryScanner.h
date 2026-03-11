@@ -1,0 +1,22 @@
+#pragma once
+
+#include <QObject>
+#include <QVector>
+#include "VideoItem.h"
+
+class ThumbnailService;
+
+class LibraryScanner : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit LibraryScanner(ThumbnailService *thumbnailService, QObject *parent = nullptr);
+    QVector<VideoItem> scan(const QString &folderPath) const;
+
+private:
+    bool isVideoFile(const QString &suffix) const;
+    QVector<VideoItem> createDemoItems() const;
+
+    ThumbnailService *m_thumbnailService;
+};

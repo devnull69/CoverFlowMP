@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/">
+        <file>qml/Main.qml</file>
+        <file>qml/BrowserScreen.qml</file>
+        <file>qml/CoverFlowView.qml</file>
+        <file>qml/PlayerScreen.qml</file>
+        <file>qml/PauseOverlay.qml</file>
+        <file>assets/wallpaper.jpg</file>
+    </qresource>
+</RCC>
