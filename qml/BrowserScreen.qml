@@ -40,7 +40,7 @@ Item {
         anchors.bottom: parent.bottom
 
         anchors.topMargin: parent.height * 0.52
-        anchors.bottomMargin: 20
+        anchors.bottomMargin: parent.height * 0.03
 
         model: libraryModel
         currentIndex: appController.currentIndex

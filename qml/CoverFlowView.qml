@@ -7,19 +7,25 @@ Item {
 
     property var model
     property int currentIndex: 0
-    property int coverWidth: 270
-    property int coverHeight: 330
-    property int coverRadius: 16
+
+    property real coverAspectRatio: 270 / 330
+    property real flowWidth: width
+    property real flowHeight: height
+
+    property real coverHeight: Math.min(flowHeight * 0.72, flowWidth * 0.22 / coverAspectRatio)
+    property real coverWidth: coverHeight * coverAspectRatio
+    property real coverRadius: coverWidth * 0.06
     property real tiltAngle: 18
+
+    property real overlapRatio: 0.70
+    property real stepX: coverWidth - (coverWidth * overlapRatio)
+    property real verticalLift: coverHeight * 0.07
+    property real titleWidth: coverWidth * 1.35
+    property real baseYOffset: root.height * 0.10
+    property real leftSideExtraOffset: coverWidth * 0.25
 
     signal activated(int index)
     signal currentIndexChangedByUser(int index)
-
-    function syncToCurrentIndex() {
-        if (listView.count > 0 && root.currentIndex >= 0 && root.currentIndex < listView.count) {
-            listView.positionViewAtIndex(root.currentIndex, ListView.Center)
-        }
-    }
 
     function moveLeft() {
         if (root.currentIndex > 0) {
@@ -29,202 +35,204 @@ Item {
     }
 
     function moveRight() {
-        if (root.currentIndex < listView.count - 1) {
+        if (repeater.count > 0 && root.currentIndex < repeater.count - 1) {
             root.currentIndex = root.currentIndex + 1
             currentIndexChangedByUser(root.currentIndex)
         }
     }
 
-    onModelChanged: {
-        startupPositionTimer.start()
-    }
+    function coverCenterX(index) {
+        var delta = index - root.currentIndex
+        var x = root.width / 2 + delta * root.stepX
 
-    Component.onCompleted: {
-        root.currentIndex = 0
-        startupPositionTimer.start()
-    }
-
-    Timer {
-        id: startupPositionTimer
-        interval: 10
-        repeat: false
-        onTriggered: {
-            syncToCurrentIndex()
+        if (delta < 0) {
+            x = x - Math.abs(delta) * root.leftSideExtraOffset
         }
+
+        return x
     }
 
-    ListView {
-        id: listView
-        anchors.fill: parent
-        anchors.leftMargin: 80
-        anchors.rightMargin: 80
-        anchors.topMargin: 20
-        anchors.bottomMargin: 20
+    function coverLeftX(index) {
+        return coverCenterX(index) - root.coverWidth / 2
+    }
 
-        orientation: ListView.Horizontal
-        spacing: -70
-        model: root.model
-        currentIndex: root.currentIndex
-        snapMode: ListView.SnapOneItem
-        highlightRangeMode: ListView.StrictlyEnforceRange
-        preferredHighlightBegin: width / 2 - root.coverWidth / 2
-        preferredHighlightEnd: width / 2 - root.coverWidth / 2
-        highlightMoveDuration: 220
+    function coverBaseY(index) {
+        return index === root.currentIndex
+            ? root.height - root.coverHeight - root.verticalLift - root.baseYOffset
+            : root.height - root.coverHeight - root.baseYOffset
+    }
+
+    Item {
+        id: viewport
+        anchors.fill: parent
         clip: true
 
-        delegate: Item {
-            id: delegateRoot
+        Repeater {
+            id: repeater
+            model: root.model
 
-            width: root.coverWidth
-            height: root.coverHeight + 110
+            delegate: Item {
+                id: delegateRoot
 
-            readonly property bool isCurrent: index === root.currentIndex
-            readonly property bool isLeftSide: index < root.currentIndex
-            readonly property bool isRightSide: index > root.currentIndex
+                required property int index
+                required property string title
+                required property string coverPath
+                required property bool isDemo
 
-            scale: isCurrent ? 1.0 : 0.84
-            opacity: 1.0
-            property int distanceFromCurrent: Math.abs(index - root.currentIndex)
-            z: 1000 - distanceFromCurrent
+                readonly property bool isCurrent: index === root.currentIndex
+                readonly property bool isLeftSide: index < root.currentIndex
+                readonly property bool isRightSide: index > root.currentIndex
+                readonly property int distanceFromCurrent: Math.abs(index - root.currentIndex)
 
-            transform: Rotation {
-                origin.x: delegateRoot.width / 2
-                origin.y: root.coverHeight / 2
-                axis { x: 0; y: 1; z: 0 }
-                angle: isCurrent ? 0 : (isLeftSide ? root.tiltAngle : -root.tiltAngle)
+                width: root.coverWidth
+                height: root.coverHeight + root.height * 0.18
 
-                Behavior on angle {
-                    NumberAnimation { duration: 220 }
-                }
-            }
+                x: root.coverLeftX(index)
+                y: root.coverBaseY(index)
 
-            Behavior on scale {
-                NumberAnimation { duration: 220 }
-            }
+                scale: isCurrent ? 1.0 : 0.84
+                opacity: 1.0
+                z: 1000 - distanceFromCurrent
 
-            Behavior on opacity {
-                NumberAnimation { duration: 220 }
-            }
+                transform: Rotation {
+                    origin.x: delegateRoot.width / 2
+                    origin.y: root.coverHeight / 2
+                    axis { x: 0; y: 1; z: 0 }
+                    angle: isCurrent ? 0 : (isLeftSide ? root.tiltAngle : -root.tiltAngle)
 
-            Column {
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: isCurrent ? 24 : 0
-                spacing: 12
-
-                Behavior on anchors.bottomMargin {
-                    NumberAnimation { duration: 220 }
+                    Behavior on angle {
+                        NumberAnimation { duration: 220 }
+                    }
                 }
 
-                Rectangle {
-                    id: coverFrame
-                    width: root.coverWidth
-                    height: root.coverHeight
-                    radius: root.coverRadius
-                    color: "#1c1c1c"
-                    border.width: isCurrent ? 3 : 1
-                    border.color: isCurrent ? "white" : "#666666"
-                    clip: true
+                Behavior on x {
+                    NumberAnimation { duration: 220 }
+                }
 
-                    Item {
-                        anchors.fill: parent
-                        anchors.margins: isCurrent ? 3 : 1
-                        visible: coverPath !== ""
+                Behavior on y {
+                    NumberAnimation { duration: 220 }
+                }
 
-                        Image {
-                            id: coverImage
+                Behavior on scale {
+                    NumberAnimation { duration: 220 }
+                }
+
+                Column {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    spacing: 12
+
+                    Rectangle {
+                        id: coverFrame
+                        width: root.coverWidth
+                        height: root.coverHeight
+                        radius: root.coverRadius
+                        color: "#1c1c1c"
+                        border.width: isCurrent
+                                      ? Math.max(2, root.coverWidth * 0.012)
+                                      : Math.max(1, root.coverWidth * 0.004)
+                        border.color: isCurrent ? "white" : "#666666"
+                        clip: true
+
+                        Item {
                             anchors.fill: parent
-                            fillMode: Image.PreserveAspectCrop
-                            source: coverPath !== "" ? "file://" + coverPath : ""
-                            visible: false
-                            smooth: true
+                            anchors.margins: isCurrent ? 3 : 1
+                            visible: coverPath !== ""
+
+                            Image {
+                                id: coverImage
+                                anchors.fill: parent
+                                fillMode: Image.PreserveAspectCrop
+                                source: coverPath !== "" ? "file://" + coverPath : ""
+                                visible: false
+                                smooth: true
+                            }
+
+                            Rectangle {
+                                id: coverMask
+                                anchors.fill: parent
+                                radius: root.coverRadius - (isCurrent ? 3 : 1)
+                                visible: false
+                            }
+
+                            OpacityMask {
+                                anchors.fill: parent
+                                source: coverImage
+                                maskSource: coverMask
+                            }
                         }
 
                         Rectangle {
-                            id: coverMask
                             anchors.fill: parent
+                            anchors.margins: isCurrent ? 3 : 1
+                            visible: coverPath === ""
+                            color: isDemo ? "#4c5870" : "#303030"
                             radius: root.coverRadius - (isCurrent ? 3 : 1)
-                            visible: false
                         }
 
-                        OpacityMask {
-                            anchors.fill: parent
-                            source: coverImage
-                            maskSource: coverMask
+                        Column {
+                            anchors.centerIn: parent
+                            visible: coverPath === ""
+                            spacing: 8
+
+                            Text {
+                                text: isDemo ? "DEMO" : "VIDEO"
+                                color: "white"
+                                font.pixelSize: root.coverHeight * 0.10
+                                horizontalAlignment: Text.AlignHCenter
+                                width: root.coverWidth - 40
+                            }
+
+                            Text {
+                                text: title
+                                color: "#dddddd"
+                                font.pixelSize: root.coverHeight * 0.055
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                width: root.coverWidth - 40
+                            }
+                        }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: coverFrame.horizontalCenter
+                        width: root.titleWidth
+                        text: title
+                        color: "white"
+                        font.pixelSize: root.coverHeight * 0.072
+                        font.bold: true
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.Wrap
+                        elide: Text.ElideNone
+                        visible: isCurrent
+                        opacity: isCurrent ? 1.0 : 0.0
+
+                        Behavior on opacity {
+                            NumberAnimation { duration: 180 }
                         }
                     }
 
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: isCurrent ? 3 : 1
-                        visible: coverPath === ""
-                        color: isDemo ? "#4c5870" : "#303030"
-                        radius: root.coverRadius - (isCurrent ? 3 : 1)
-                    }
-
-                    Column {
-                        anchors.centerIn: parent
-                        visible: coverPath === ""
-                        spacing: 8
-
-                        Text {
-                            text: isDemo ? "DEMO" : "VIDEO"
-                            color: "white"
-                            font.pixelSize: 28
-                            horizontalAlignment: Text.AlignHCenter
-                            width: root.coverWidth - 40
-                        }
-
-                        Text {
-                            text: title
-                            color: "#dddddd"
-                            font.pixelSize: 16
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.WordWrap
-                            width: root.coverWidth - 40
-                        }
+                    Text {
+                        width: root.coverWidth
+                        text: ""
+                        color: "white"
+                        font.pixelSize: root.coverHeight * 0.072
+                        horizontalAlignment: Text.AlignHCenter
+                        visible: !isCurrent
                     }
                 }
 
-                Text {
-                    anchors.horizontalCenter: coverFrame.horizontalCenter
-                    width: root.coverWidth + 80
-                    text: title
-                    color: "white"
-                    font.pixelSize: 24
-                    font.bold: true
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    elide: Text.ElideNone
-                    visible: isCurrent
-                    opacity: isCurrent ? 1.0 : 0.0
+                MouseArea {
+                    anchors.fill: parent
 
-                    Behavior on opacity {
-                        NumberAnimation { duration: 180 }
+                    onClicked: {
+                        root.currentIndex = index
+                        currentIndexChangedByUser(index)
                     }
-                }
 
-                Text {
-                    width: root.coverWidth
-                    text: ""
-                    color: "white"
-                    font.pixelSize: 24
-                    horizontalAlignment: Text.AlignHCenter
-                    elide: Text.ElideRight
-                    visible: !isCurrent
-                }
-            }
-
-            MouseArea {
-                anchors.fill: parent
-
-                onClicked: {
-                    root.currentIndex = index
-                    currentIndexChangedByUser(index)
-                }
-
-                onDoubleClicked: {
-                    activated(index)
+                    onDoubleClicked: {
+                        activated(index)
+                    }
                 }
             }
         }
