@@ -90,6 +90,19 @@ void MpvObject::processMpvEvents()
                     emit durationChanged(m_duration);
                 }
             }
+        } else if (event->event_id == MPV_EVENT_FILE_LOADED) {
+            if (m_hasDeferredSeekAfterLoad && m_deferredSeekAfterLoad > 0.0) {
+                const QByteArray seekPos = QByteArray::number(m_deferredSeekAfterLoad, 'f', 3);
+                const char *seekArgs[] = { "seek", seekPos.constData(), "absolute+exact", nullptr };
+                if (mpv_command(m_mpv, seekArgs) >= 0) {
+                    if (!qFuzzyCompare(m_position + 1.0, m_deferredSeekAfterLoad + 1.0)) {
+                        m_position = m_deferredSeekAfterLoad;
+                        emit positionChanged(m_position);
+                    }
+                }
+            }
+            m_hasDeferredSeekAfterLoad = false;
+            m_deferredSeekAfterLoad = 0.0;
         } else if (event->event_id == MPV_EVENT_END_FILE) {
             if (m_position != 0.0) {
                 m_position = 0.0;
@@ -147,16 +160,13 @@ void MpvObject::playFile(const QString &filePath, double startPosition)
     if (mpv_command(m_mpv, loadArgs) < 0)
         return;
 
-    if (startPosition > 0.0) {
-        const QByteArray seekPos = QByteArray::number(startPosition, 'f', 3);
-        const char *seekArgs[] = { "seek", seekPos.constData(), "absolute", nullptr };
-        mpv_command(m_mpv, seekArgs);
-    }
+    m_hasDeferredSeekAfterLoad = startPosition > 0.0;
+    m_deferredSeekAfterLoad = startPosition > 0.0 ? startPosition : 0.0;
 
     int unpause = 0;
     mpv_set_property(m_mpv, "pause", MPV_FORMAT_FLAG, &unpause);
 
-    m_position = startPosition;
+    m_position = 0.0;
     m_duration = 0.0;
     m_paused = false;
     emitStateSnapshot();
@@ -209,6 +219,8 @@ void MpvObject::stop()
     m_hasPendingPlayback = false;
     m_pendingFilePath.clear();
     m_pendingStartPosition = 0.0;
+    m_hasDeferredSeekAfterLoad = false;
+    m_deferredSeekAfterLoad = 0.0;
 
     m_position = 0.0;
     m_duration = 0.0;

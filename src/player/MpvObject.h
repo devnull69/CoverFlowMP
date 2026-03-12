@@ -40,6 +40,8 @@ private:
     QString m_pendingFilePath;
     double m_pendingStartPosition = 0.0;
     bool m_hasPendingPlayback = false;
+    bool m_hasDeferredSeekAfterLoad = false;
+    double m_deferredSeekAfterLoad = 0.0;
     bool m_paused = false;
     double m_position = 0.0;
     double m_duration = 0.0;

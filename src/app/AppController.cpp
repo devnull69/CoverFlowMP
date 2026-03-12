@@ -8,6 +8,8 @@
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QMetaObject>
+#include <algorithm>
+#include <cmath>
 
 AppController::AppController(VideoLibraryModel *libraryModel,
                              LibraryScanner *scanner,
@@ -80,16 +82,29 @@ void AppController::playSelected(int index)
     m_currentFilePath = item.filePath;
     m_currentVideoName = QFileInfo(item.filePath).completeBaseName();
     emit currentVideoNameChanged();
+    const double loadedResume = m_resumeRepository->loadPosition(item.filePath);
+    const double resumePosition = std::isfinite(loadedResume) ? std::max(0.0, loadedResume) : 0.0;
     const QString fileToPlay = item.filePath;
-    QMetaObject::invokeMethod(this, [this, fileToPlay]() {
+    QMetaObject::invokeMethod(this, [this, fileToPlay, resumePosition]() {
         if (!m_playerVisible)
             return;
-        m_playerController->playFile(fileToPlay, 0.0);
+        m_playerController->playFile(fileToPlay, resumePosition);
     }, Qt::QueuedConnection);
 }
 
 void AppController::backToBrowser()
 {
+    const double pos = m_playerController->position();
+    const double dur = m_playerController->duration();
+    double savePos = std::max(0.0, pos);
+    if (dur > 0.0)
+        savePos = std::min(savePos, dur);
+
+    if (!m_currentFilePath.isEmpty()) {
+        m_resumeRepository->savePosition(m_currentFilePath, savePos, dur);
+        m_libraryModel->updateResumePosition(m_currentFilePath, savePos);
+    }
+
     m_playerController->stop();
     setPlayerCursorHidden(false);
 
