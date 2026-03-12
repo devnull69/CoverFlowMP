@@ -26,6 +26,8 @@ QVariant VideoLibraryModel::data(const QModelIndex &index, int role) const
     case DurationRole: return item.duration;
     case ResumePositionRole: return item.resumePosition;
     case IsDemoRole: return item.isDemo;
+    case IsFolderRole: return item.isFolder;
+    case IsParentFolderRole: return item.isParentFolder;
     default: return {};
     }
 }
@@ -38,7 +40,9 @@ QHash<int, QByteArray> VideoLibraryModel::roleNames() const
         { CoverPathRole, "coverPath" },
         { DurationRole, "duration" },
         { ResumePositionRole, "resumePosition" },
-        { IsDemoRole, "isDemo" }
+        { IsDemoRole, "isDemo" },
+        { IsFolderRole, "isFolder" },
+        { IsParentFolderRole, "isParentFolder" }
     };
 }
 

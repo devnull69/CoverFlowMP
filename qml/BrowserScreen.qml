@@ -71,7 +71,7 @@ Item {
     }
 
     Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_0 && !root.deleteDialogVisible) {
+        if (event.key === Qt.Key_0 && !root.deleteDialogVisible && appController.canDeleteCurrentVideo()) {
             root.deleteChoiceIndex = 1
             root.deleteDialogVisible = true
             event.accepted = true

@@ -78,6 +78,8 @@ Item {
                 required property string title
                 required property string coverPath
                 required property bool isDemo
+                required property bool isFolder
+                required property bool isParentFolder
 
                 readonly property bool isCurrent: index === root.currentIndex
                 readonly property bool isLeftSide: index < root.currentIndex
@@ -165,14 +167,42 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             anchors.margins: isCurrent ? 3 : 1
-                            visible: coverPath === ""
+                            visible: coverPath === "" && !isFolder
                             color: isDemo ? "#4c5870" : "#303030"
                             radius: root.coverRadius - (isCurrent ? 3 : 1)
                         }
 
+                        Rectangle {
+                            anchors.fill: parent
+                            anchors.margins: isCurrent ? 3 : 1
+                            visible: isFolder
+                            color: isParentFolder ? "#2f4f6f" : "#345c7f"
+                            radius: root.coverRadius - (isCurrent ? 3 : 1)
+
+                            Rectangle {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.top: parent.top
+                                anchors.topMargin: parent.height * 0.18
+                                width: parent.width * 0.54
+                                height: parent.height * 0.22
+                                radius: parent.height * 0.18
+                                color: isParentFolder ? "#6f98bd" : "#84aed2"
+                            }
+
+                            Rectangle {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.top: parent.top
+                                anchors.topMargin: parent.height * 0.30
+                                width: parent.width * 0.74
+                                height: parent.height * 0.46
+                                radius: parent.height * 0.10
+                                color: isParentFolder ? "#7aa4ca" : "#98c1e3"
+                            }
+                        }
+
                         Column {
                             anchors.centerIn: parent
-                            visible: coverPath === ""
+                            visible: coverPath === "" && !isFolder
                             spacing: 8
 
                             Text {
@@ -192,6 +222,7 @@ Item {
                                 width: root.coverWidth - 40
                             }
                         }
+
                     }
 
                     Text {

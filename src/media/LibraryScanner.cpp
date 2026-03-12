@@ -41,6 +41,34 @@ QVector<VideoItem> LibraryScanner::scan(const QString &folderPath) const
     if (!dir.exists())
         return createDemoItems();
 
+    const QString currentPath = dir.absolutePath();
+    const QString parentPath = QFileInfo(currentPath).dir().absolutePath();
+    if (parentPath != currentPath) {
+        VideoItem parentFolder;
+        parentFolder.title = "..";
+        parentFolder.filePath = parentPath;
+        parentFolder.coverPath = "";
+        parentFolder.isFolder = true;
+        parentFolder.isParentFolder = true;
+        items.push_back(parentFolder);
+    }
+
+    const QFileInfoList folders = dir.entryInfoList(
+        QDir::Dirs | QDir::NoDotAndDotDot,
+        QDir::Name
+        );
+
+    for (const QFileInfo &fi : folders) {
+        VideoItem item;
+        item.title = fi.fileName();
+        item.filePath = fi.absoluteFilePath();
+        item.coverPath = "";
+        item.isFolder = true;
+        item.isParentFolder = false;
+        item.isDemo = false;
+        items.push_back(item);
+    }
+
     const QFileInfoList files = dir.entryInfoList(
         QDir::Files | QDir::NoDotAndDotDot,
         QDir::Name
@@ -62,6 +90,8 @@ QVector<VideoItem> LibraryScanner::scan(const QString &folderPath) const
         }
 
         item.isDemo = false;
+        item.isFolder = false;
+        item.isParentFolder = false;
         items.push_back(item);
     }
 

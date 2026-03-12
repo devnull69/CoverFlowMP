@@ -33,6 +33,7 @@ public:
     Q_INVOKABLE void initialize(const QString &videoFolder);
     Q_INVOKABLE void playSelected(int index);
     Q_INVOKABLE void decideResumePlayback(bool continueFromSavedPosition);
+    Q_INVOKABLE bool canDeleteCurrentVideo() const;
     Q_INVOKABLE bool deleteCurrentVideo();
     Q_INVOKABLE void backToBrowser();
     Q_INVOKABLE void setCurrentIndex(int index);

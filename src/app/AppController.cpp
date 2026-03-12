@@ -92,10 +92,21 @@ void AppController::initialize(const QString &videoFolder)
     auto items = m_scanner->scan(videoFolder);
 
     for (auto &item : items) {
-        item.resumePosition = m_resumeRepository->loadPosition(item.filePath);
+        if (!item.isFolder && !item.filePath.isEmpty())
+            item.resumePosition = m_resumeRepository->loadPosition(item.filePath);
     }
 
     m_libraryModel->setItems(items);
+
+    const int count = m_libraryModel->rowCount();
+    const int previousIndex = m_currentIndex;
+    if (count <= 0)
+        m_currentIndex = 0;
+    else
+        m_currentIndex = std::clamp(m_currentIndex, 0, count - 1);
+
+    if (m_currentIndex != previousIndex)
+        emit currentIndexChanged();
 }
 
 void AppController::playSelected(int index)
@@ -103,6 +114,15 @@ void AppController::playSelected(int index)
     const auto item = m_libraryModel->itemAt(index);
     if (item.filePath.isEmpty())
         return;
+
+    if (item.isFolder) {
+        initialize(item.filePath);
+        if (m_currentIndex != 0) {
+            m_currentIndex = 0;
+            emit currentIndexChanged();
+        }
+        return;
+    }
 
     m_currentIndex = index;
     emit currentIndexChanged();
@@ -135,7 +155,7 @@ void AppController::playSelected(int index)
 bool AppController::deleteCurrentVideo()
 {
     const auto item = m_libraryModel->itemAt(m_currentIndex);
-    if (item.filePath.isEmpty())
+    if (item.filePath.isEmpty() || item.isFolder)
         return false;
 
     m_resumeRepository->deletePosition(item.filePath);
@@ -157,6 +177,12 @@ bool AppController::deleteCurrentVideo()
     }
 
     return true;
+}
+
+bool AppController::canDeleteCurrentVideo() const
+{
+    const auto item = m_libraryModel->itemAt(m_currentIndex);
+    return !item.filePath.isEmpty() && !item.isFolder;
 }
 
 void AppController::decideResumePlayback(bool continueFromSavedPosition)
