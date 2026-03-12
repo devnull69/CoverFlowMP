@@ -6,6 +6,21 @@ Item {
     id: root
     anchors.fill: parent
     focus: true
+    property int resumeChoiceIndex: 0
+
+    function pad2(value) {
+        return value < 10 ? "0" + value : "" + value
+    }
+
+    function formatTime(seconds) {
+        var total = Math.max(0, Math.floor(seconds))
+        var h = Math.floor(total / 3600)
+        var m = Math.floor((total % 3600) / 60)
+        var s = total % 60
+        if (h > 0)
+            return h + ":" + pad2(m) + ":" + pad2(s)
+        return m + ":" + pad2(s)
+    }
 
     Component.onCompleted: {
         Window.window.visibility = Window.FullScreen
@@ -43,17 +58,132 @@ Item {
         }
     }
 
+    Rectangle {
+        id: resumeDialog
+        visible: appController.resumePromptVisible
+        anchors.centerIn: parent
+        width: parent.width * 0.42
+        height: parent.height * 0.40
+        radius: 14
+        color: "#D91A1A1A"
+        border.width: 1
+        border.color: "#808080"
+        clip: true
+
+        Column {
+            id: resumeDialogContent
+            anchors.fill: parent
+            anchors.margins: resumeDialog.height * 0.08
+            spacing: resumeDialog.height * 0.06
+
+            Text {
+                width: resumeDialogContent.width
+                horizontalAlignment: Text.AlignHCenter
+                color: "white"
+                wrapMode: Text.WordWrap
+                font.pixelSize: Math.max(20, resumeDialog.height * 0.09)
+                font.bold: true
+                text: "Fortsetzen bei " + formatTime(appController.pendingResumePosition) + "?"
+            }
+
+            Item {
+                width: resumeDialogContent.width
+                height: resumeDialog.height * 0.03
+            }
+
+            Rectangle {
+                width: resumeDialogContent.width
+                height: Math.max(56, resumeDialog.height * 0.20)
+                radius: 8
+                color: root.resumeChoiceIndex === 0 ? "#2AA84A" : "#303030"
+                border.width: 1
+                border.color: root.resumeChoiceIndex === 0 ? "#7CF1A3" : "#666666"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Weiter"
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: Math.max(22, resumeDialog.height * 0.10)
+                }
+            }
+
+            Rectangle {
+                width: resumeDialogContent.width
+                height: Math.max(56, resumeDialog.height * 0.20)
+                radius: 8
+                color: root.resumeChoiceIndex === 1 ? "#2AA84A" : "#303030"
+                border.width: 1
+                border.color: root.resumeChoiceIndex === 1 ? "#7CF1A3" : "#666666"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Von vorne"
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: Math.max(22, resumeDialog.height * 0.09)
+                }
+            }
+        }
+    }
+
+    Connections {
+        target: appController
+        function onResumePromptVisibleChanged() {
+            if (appController.resumePromptVisible)
+                root.resumeChoiceIndex = 0
+        }
+    }
+
     Keys.onSpacePressed: {
+        if (appController.resumePromptVisible)
+            return
         playerController.togglePause()
     }
 
     Keys.onLeftPressed: function(event) {
+        if (appController.resumePromptVisible) {
+            event.accepted = true
+            return
+        }
         playerController.seekRelative(-10.0)
         event.accepted = true
     }
 
     Keys.onRightPressed: function(event) {
+        if (appController.resumePromptVisible) {
+            event.accepted = true
+            return
+        }
         playerController.seekRelative(10.0)
+        event.accepted = true
+    }
+
+    Keys.onUpPressed: function(event) {
+        if (!appController.resumePromptVisible)
+            return
+        root.resumeChoiceIndex = 0
+        event.accepted = true
+    }
+
+    Keys.onDownPressed: function(event) {
+        if (!appController.resumePromptVisible)
+            return
+        root.resumeChoiceIndex = 1
+        event.accepted = true
+    }
+
+    Keys.onReturnPressed: function(event) {
+        if (!appController.resumePromptVisible)
+            return
+        appController.decideResumePlayback(root.resumeChoiceIndex === 0)
+        event.accepted = true
+    }
+
+    Keys.onEnterPressed: function(event) {
+        if (!appController.resumePromptVisible)
+            return
+        appController.decideResumePlayback(root.resumeChoiceIndex === 0)
         event.accepted = true
     }
 

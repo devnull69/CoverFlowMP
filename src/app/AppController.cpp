@@ -55,6 +55,36 @@ QString AppController::currentVideoName() const
     return m_currentVideoName;
 }
 
+bool AppController::resumePromptVisible() const
+{
+    return m_resumePromptVisible;
+}
+
+double AppController::pendingResumePosition() const
+{
+    return m_pendingResumePosition;
+}
+
+void AppController::startPlayback(double startPosition)
+{
+    if (m_resumePromptVisible) {
+        m_resumePromptVisible = false;
+        emit resumePromptVisibleChanged();
+    }
+
+    if (m_pendingResumePosition != 0.0) {
+        m_pendingResumePosition = 0.0;
+        emit pendingResumePositionChanged();
+    }
+
+    const QString fileToPlay = m_currentFilePath;
+    QMetaObject::invokeMethod(this, [this, fileToPlay, startPosition]() {
+        if (!m_playerVisible || fileToPlay.isEmpty() || m_currentFilePath != fileToPlay)
+            return;
+        m_playerController->playFile(fileToPlay, startPosition);
+    }, Qt::QueuedConnection);
+}
+
 void AppController::initialize(const QString &videoFolder)
 {
     auto items = m_scanner->scan(videoFolder);
@@ -82,31 +112,59 @@ void AppController::playSelected(int index)
     m_currentFilePath = item.filePath;
     m_currentVideoName = QFileInfo(item.filePath).completeBaseName();
     emit currentVideoNameChanged();
+
     const double loadedResume = m_resumeRepository->loadPosition(item.filePath);
     const double resumePosition = std::isfinite(loadedResume) ? std::max(0.0, loadedResume) : 0.0;
-    const QString fileToPlay = item.filePath;
-    QMetaObject::invokeMethod(this, [this, fileToPlay, resumePosition]() {
-        if (!m_playerVisible)
-            return;
-        m_playerController->playFile(fileToPlay, resumePosition);
-    }, Qt::QueuedConnection);
+
+    if (resumePosition > 0.0) {
+        m_pendingResumePosition = resumePosition;
+        emit pendingResumePositionChanged();
+        m_resumePromptVisible = true;
+        emit resumePromptVisibleChanged();
+    } else {
+        if (m_pendingResumePosition != 0.0) {
+            m_pendingResumePosition = 0.0;
+            emit pendingResumePositionChanged();
+        }
+        startPlayback(0.0);
+    }
+}
+
+void AppController::decideResumePlayback(bool continueFromSavedPosition)
+{
+    if (!m_resumePromptVisible)
+        return;
+
+    const double startPosition = continueFromSavedPosition ? m_pendingResumePosition : 0.0;
+    startPlayback(startPosition);
 }
 
 void AppController::backToBrowser()
 {
-    const double pos = m_playerController->position();
-    const double dur = m_playerController->duration();
-    double savePos = std::max(0.0, pos);
-    if (dur > 0.0)
-        savePos = std::min(savePos, dur);
+    if (!m_resumePromptVisible) {
+        const double pos = m_playerController->position();
+        const double dur = m_playerController->duration();
+        double savePos = std::max(0.0, pos);
+        if (dur > 0.0)
+            savePos = std::min(savePos, dur);
 
-    if (!m_currentFilePath.isEmpty()) {
-        m_resumeRepository->savePosition(m_currentFilePath, savePos, dur);
-        m_libraryModel->updateResumePosition(m_currentFilePath, savePos);
+        if (!m_currentFilePath.isEmpty()) {
+            m_resumeRepository->savePosition(m_currentFilePath, savePos, dur);
+            m_libraryModel->updateResumePosition(m_currentFilePath, savePos);
+        }
     }
 
     m_playerController->stop();
     setPlayerCursorHidden(false);
+
+    if (m_resumePromptVisible) {
+        m_resumePromptVisible = false;
+        emit resumePromptVisibleChanged();
+    }
+    if (m_pendingResumePosition != 0.0) {
+        m_pendingResumePosition = 0.0;
+        emit pendingResumePositionChanged();
+    }
 
     m_playerVisible = false;
     emit playerVisibleChanged();
