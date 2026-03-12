@@ -4,6 +4,7 @@
 #include "../media/LibraryScanner.h"
 #include "../player/PlayerController.h"
 #include "../persistence/ResumeRepository.h"
+#include <QMetaObject>
 
 AppController::AppController(VideoLibraryModel *libraryModel,
                              LibraryScanner *scanner,
@@ -48,27 +49,26 @@ void AppController::playSelected(int index)
     m_currentIndex = index;
     emit currentIndexChanged();
 
-    m_currentFilePath = item.filePath;
-    m_playerController->playFile(item.filePath, item.resumePosition);
-
     m_playerVisible = true;
     emit playerVisibleChanged();
+
+    m_currentFilePath = item.filePath;
+    const QString fileToPlay = item.filePath;
+    QMetaObject::invokeMethod(this, [this, fileToPlay]() {
+        if (!m_playerVisible)
+            return;
+        m_playerController->playFile(fileToPlay, 0.0);
+    }, Qt::QueuedConnection);
 }
 
 void AppController::backToBrowser()
 {
-    const double pos = m_playerController->position();
-    const double dur = m_playerController->duration();
-
-    if (!m_currentFilePath.isEmpty()) {
-        m_resumeRepository->savePosition(m_currentFilePath, pos, dur);
-        m_libraryModel->updateResumePosition(m_currentFilePath, pos);
-    }
-
     m_playerController->stop();
 
     m_playerVisible = false;
     emit playerVisibleChanged();
+
+    m_currentFilePath.clear();
 }
 
 void AppController::setCurrentIndex(int index)

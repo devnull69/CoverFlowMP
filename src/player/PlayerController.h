@@ -22,6 +22,7 @@ public:
     Q_INVOKABLE void playFile(const QString &filePath, double startPosition = 0.0);
     Q_INVOKABLE void togglePause();
     Q_INVOKABLE void stop();
+    Q_INVOKABLE void attachToWindow(QObject *windowObject);
 
 signals:
     void pausedChanged();

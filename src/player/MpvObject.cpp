@@ -1,30 +1,197 @@
 #include "MpvObject.h"
 
+#include <QFileInfo>
+
+#include <mpv/client.h>
+
 MpvObject::MpvObject(QObject *parent)
     : QObject(parent)
 {
+    m_eventTimer.setInterval(16);
+    connect(&m_eventTimer, &QTimer::timeout, this, &MpvObject::processMpvEvents);
 }
 
-void MpvObject::playFile(const QString &filePath, double startPosition)
+MpvObject::~MpvObject()
 {
-    Q_UNUSED(filePath)
-    m_position = startPosition;
-    m_duration = 0.0;
-    m_paused = false;
+    m_eventTimer.stop();
+    if (m_mpv) {
+        mpv_terminate_destroy(m_mpv);
+        m_mpv = nullptr;
+    }
+}
 
+bool MpvObject::ensureInitialized()
+{
+    if (m_mpv)
+        return true;
+
+    m_mpv = mpv_create();
+    if (!m_mpv)
+        return false;
+
+    mpv_set_option_string(m_mpv, "terminal", "no");
+    mpv_set_option_string(m_mpv, "vo", "x11");
+    mpv_set_option_string(m_mpv, "fullscreen", "no");
+    mpv_set_option_string(m_mpv, "force-window", "no");
+    mpv_set_option_string(m_mpv, "keep-open", "no");
+    mpv_set_option_string(m_mpv, "input-default-bindings", "no");
+    mpv_set_option_string(m_mpv, "input-vo-keyboard", "no");
+
+    if (m_videoWindowId != 0) {
+        qint64 wid = static_cast<qint64>(m_videoWindowId);
+        mpv_set_option(m_mpv, "wid", MPV_FORMAT_INT64, &wid);
+    }
+
+    if (mpv_initialize(m_mpv) < 0) {
+        mpv_terminate_destroy(m_mpv);
+        m_mpv = nullptr;
+        return false;
+    }
+
+    mpv_observe_property(m_mpv, 0, "pause", MPV_FORMAT_FLAG);
+    mpv_observe_property(m_mpv, 0, "time-pos", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(m_mpv, 0, "duration", MPV_FORMAT_DOUBLE);
+
+    m_eventTimer.start();
+    return true;
+}
+
+void MpvObject::processMpvEvents()
+{
+    if (!m_mpv)
+        return;
+
+    while (true) {
+        mpv_event *event = mpv_wait_event(m_mpv, 0.0);
+        if (!event || event->event_id == MPV_EVENT_NONE)
+            break;
+
+        if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
+            auto *prop = static_cast<mpv_event_property *>(event->data);
+            if (!prop || !prop->name)
+                continue;
+
+            if (qstrcmp(prop->name, "pause") == 0 && prop->format == MPV_FORMAT_FLAG && prop->data) {
+                const bool paused = *static_cast<int *>(prop->data) != 0;
+                if (m_paused != paused) {
+                    m_paused = paused;
+                    emit pausedChanged(m_paused);
+                }
+            } else if (qstrcmp(prop->name, "time-pos") == 0 && prop->format == MPV_FORMAT_DOUBLE && prop->data) {
+                const double position = *static_cast<double *>(prop->data);
+                if (!qFuzzyCompare(m_position + 1.0, position + 1.0)) {
+                    m_position = position;
+                    emit positionChanged(m_position);
+                }
+            } else if (qstrcmp(prop->name, "duration") == 0 && prop->format == MPV_FORMAT_DOUBLE && prop->data) {
+                const double duration = *static_cast<double *>(prop->data);
+                if (!qFuzzyCompare(m_duration + 1.0, duration + 1.0)) {
+                    m_duration = duration;
+                    emit durationChanged(m_duration);
+                }
+            }
+        } else if (event->event_id == MPV_EVENT_END_FILE) {
+            if (m_position != 0.0) {
+                m_position = 0.0;
+                emit positionChanged(m_position);
+            }
+            if (m_paused) {
+                m_paused = false;
+                emit pausedChanged(m_paused);
+            }
+        }
+    }
+}
+
+void MpvObject::emitStateSnapshot()
+{
     emit positionChanged(m_position);
     emit durationChanged(m_duration);
     emit pausedChanged(m_paused);
 }
 
+void MpvObject::setVideoWindow(uintptr_t wid)
+{
+    m_videoWindowId = wid;
+
+    if (m_mpv && m_videoWindowId != 0) {
+        qint64 windowId = static_cast<qint64>(m_videoWindowId);
+        mpv_set_property(m_mpv, "wid", MPV_FORMAT_INT64, &windowId);
+    }
+
+    if (m_hasPendingPlayback) {
+        playFile(m_pendingFilePath, m_pendingStartPosition);
+        m_hasPendingPlayback = false;
+        m_pendingFilePath.clear();
+        m_pendingStartPosition = 0.0;
+    }
+}
+
+void MpvObject::playFile(const QString &filePath, double startPosition)
+{
+    if (filePath.isEmpty())
+        return;
+
+    if (m_videoWindowId == 0) {
+        m_pendingFilePath = filePath;
+        m_pendingStartPosition = startPosition;
+        m_hasPendingPlayback = true;
+        return;
+    }
+
+    if (!ensureInitialized())
+        return;
+
+    const QByteArray utf8File = QFileInfo(filePath).absoluteFilePath().toUtf8();
+    const char *loadArgs[] = { "loadfile", utf8File.constData(), "replace", nullptr };
+    if (mpv_command(m_mpv, loadArgs) < 0)
+        return;
+
+    if (startPosition > 0.0) {
+        const QByteArray seekPos = QByteArray::number(startPosition, 'f', 3);
+        const char *seekArgs[] = { "seek", seekPos.constData(), "absolute", nullptr };
+        mpv_command(m_mpv, seekArgs);
+    }
+
+    int unpause = 0;
+    mpv_set_property(m_mpv, "pause", MPV_FORMAT_FLAG, &unpause);
+
+    m_position = startPosition;
+    m_duration = 0.0;
+    m_paused = false;
+    emitStateSnapshot();
+}
+
 void MpvObject::togglePause()
 {
+    if (!m_mpv)
+        return;
+
     m_paused = !m_paused;
+    int pausedFlag = m_paused ? 1 : 0;
+    mpv_set_property(m_mpv, "pause", MPV_FORMAT_FLAG, &pausedFlag);
     emit pausedChanged(m_paused);
 }
 
 void MpvObject::stop()
 {
+    m_eventTimer.stop();
+
+    if (m_mpv) {
+        const char *cmd[] = { "stop", nullptr };
+        mpv_command(m_mpv, cmd);
+        mpv_terminate_destroy(m_mpv);
+        m_mpv = nullptr;
+    }
+
+    m_hasPendingPlayback = false;
+    m_pendingFilePath.clear();
+    m_pendingStartPosition = 0.0;
+
+    m_position = 0.0;
+    m_duration = 0.0;
+    m_paused = false;
+    emitStateSnapshot();
 }
 
 bool MpvObject::paused() const

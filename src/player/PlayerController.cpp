@@ -1,6 +1,8 @@
 #include "PlayerController.h"
 #include "MpvObject.h"
 
+#include <QQuickWindow>
+
 PlayerController::PlayerController(QObject *parent)
     : QObject(parent),
     m_mpv(new MpvObject(this))
@@ -49,4 +51,13 @@ void PlayerController::togglePause()
 void PlayerController::stop()
 {
     m_mpv->stop();
+}
+
+void PlayerController::attachToWindow(QObject *windowObject)
+{
+    auto *window = qobject_cast<QQuickWindow *>(windowObject);
+    if (!window)
+        return;
+
+    m_mpv->setVideoWindow(static_cast<uintptr_t>(window->winId()));
 }

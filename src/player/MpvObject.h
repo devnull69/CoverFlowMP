@@ -2,6 +2,9 @@
 
 #include <QObject>
 #include <QString>
+#include <QTimer>
+#include <cstdint>
+struct mpv_handle;
 
 class MpvObject : public QObject
 {
@@ -9,10 +12,12 @@ class MpvObject : public QObject
 
 public:
     explicit MpvObject(QObject *parent = nullptr);
+    ~MpvObject() override;
 
     void playFile(const QString &filePath, double startPosition);
     void togglePause();
     void stop();
+    void setVideoWindow(uintptr_t wid);
 
     bool paused() const;
     double position() const;
@@ -24,6 +29,16 @@ signals:
     void durationChanged(double duration);
 
 private:
+    bool ensureInitialized();
+    void processMpvEvents();
+    void emitStateSnapshot();
+
+    mpv_handle *m_mpv = nullptr;
+    QTimer m_eventTimer;
+    uintptr_t m_videoWindowId = 0;
+    QString m_pendingFilePath;
+    double m_pendingStartPosition = 0.0;
+    bool m_hasPendingPlayback = false;
     bool m_paused = false;
     double m_position = 0.0;
     double m_duration = 0.0;

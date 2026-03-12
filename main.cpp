@@ -2,6 +2,8 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QDir>
+#include <clocale>
+#include <QtGlobal>
 
 #include "src/app/AppController.h"
 #include "src/media/VideoLibraryModel.h"
@@ -12,7 +14,15 @@
 
 int main(int argc, char *argv[])
 {
+    // mpv wid embedding is X11-based; enforce xcb when running from a Wayland session.
+    if (qEnvironmentVariableIsSet("WAYLAND_DISPLAY") &&
+        qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
+        qputenv("QT_QPA_PLATFORM", QByteArray("xcb"));
+    }
+
     QGuiApplication app(argc, argv);
+    
+    std::setlocale(LC_NUMERIC, "C");
 
     ResumeRepository resumeRepository;
     resumeRepository.initialize();
