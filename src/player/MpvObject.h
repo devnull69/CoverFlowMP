@@ -14,20 +14,23 @@ public:
     explicit MpvObject(QObject *parent = nullptr);
     ~MpvObject() override;
 
-    void playFile(const QString &filePath, double startPosition);
+    void playFile(const QString &filePath, double startPosition, double audioDelay = 0.0);
     void togglePause();
     void seekRelative(double seconds);
     void stop();
     void setVideoWindow(uintptr_t wid);
+    void setAudioDelay(double seconds);
 
     bool paused() const;
     double position() const;
     double duration() const;
+    double audioDelay() const;
 
 signals:
     void pausedChanged(bool paused);
     void positionChanged(double position);
     void durationChanged(double duration);
+    void audioDelayChanged(double audioDelay);
 
 private:
     bool ensureInitialized();
@@ -45,4 +48,5 @@ private:
     bool m_paused = false;
     double m_position = 0.0;
     double m_duration = 0.0;
+    double m_audioDelay = 0.0;
 };

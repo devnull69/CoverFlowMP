@@ -12,7 +12,11 @@ public:
 
     bool initialize();
     double loadPosition(const QString &filePath) const;
-    bool savePosition(const QString &filePath, double position, double duration = 0.0);
+    double loadAudioDelay(const QString &filePath) const;
+    bool savePosition(const QString &filePath,
+                      double position,
+                      double duration = 0.0,
+                      double audioDelay = 0.0);
     bool deletePosition(const QString &filePath);
     bool clearAllPositions();
 

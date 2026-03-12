@@ -7,6 +7,9 @@ Item {
     anchors.fill: parent
     focus: true
     property int resumeChoiceIndex: 0
+    property bool audioDelayMode: false
+    readonly property int audioDelayStepMs: 50
+    readonly property int audioDelayMaxMs: 2000
 
     function pad2(value) {
         return value < 10 ? "0" + value : "" + value
@@ -22,6 +25,16 @@ Item {
         return m + ":" + pad2(s)
     }
 
+    function clampAudioDelayMs(value) {
+        return Math.max(-audioDelayMaxMs, Math.min(audioDelayMaxMs, value))
+    }
+
+    function adjustAudioDelay(deltaMs) {
+        var currentMs = Math.round((playerController.audioDelay * 1000) / audioDelayStepMs) * audioDelayStepMs
+        var nextMs = clampAudioDelayMs(currentMs + deltaMs)
+        playerController.setAudioDelay(nextMs / 1000.0)
+    }
+
     Component.onCompleted: {
         Window.window.visibility = Window.FullScreen
         forceActiveFocus()
@@ -29,8 +42,11 @@ Item {
     }
 
     onVisibleChanged: {
-        if (visible)
+        if (visible) {
             forceActiveFocus()
+        } else {
+            audioDelayMode = false
+        }
     }
 
     Rectangle {
@@ -55,6 +71,8 @@ Item {
             position: playerController.position
             duration: playerController.duration
             videoName: appController.currentVideoName
+            audioDelay: playerController.audioDelay
+            audioDelayMode: root.audioDelayMode
         }
     }
 
@@ -135,8 +153,18 @@ Item {
         }
     }
 
+    Connections {
+        target: playerController
+        function onPausedChanged() {
+            if (!playerController.paused)
+                root.audioDelayMode = false
+        }
+    }
+
     Keys.onSpacePressed: {
         if (appController.resumePromptVisible)
+            return
+        if (root.audioDelayMode)
             return
         playerController.togglePause()
     }
@@ -146,12 +174,22 @@ Item {
             event.accepted = true
             return
         }
+        if (root.audioDelayMode) {
+            root.adjustAudioDelay(-root.audioDelayStepMs)
+            event.accepted = true
+            return
+        }
         playerController.seekRelative(-10.0)
         event.accepted = true
     }
 
     Keys.onRightPressed: function(event) {
         if (appController.resumePromptVisible) {
+            event.accepted = true
+            return
+        }
+        if (root.audioDelayMode) {
+            root.adjustAudioDelay(root.audioDelayStepMs)
             event.accepted = true
             return
         }
@@ -188,6 +226,18 @@ Item {
     }
 
     Keys.onPressed: function(event) {
+        if (event.key === Qt.Key_A && playerController.paused && !appController.resumePromptVisible) {
+            root.audioDelayMode = true
+            event.accepted = true
+            return
+        }
+
+        if (event.key === Qt.Key_Escape && root.audioDelayMode) {
+            root.audioDelayMode = false
+            event.accepted = true
+            return
+        }
+
         if (event.key === Qt.Key_B) {
             appController.backToBrowser()
             event.accepted = true

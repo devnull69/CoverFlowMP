@@ -21,6 +21,11 @@ PlayerController::PlayerController(QObject *parent)
         m_duration = duration;
         emit durationChanged();
     });
+
+    connect(m_mpv, &MpvObject::audioDelayChanged, this, [this](double audioDelay) {
+        m_audioDelay = audioDelay;
+        emit audioDelayChanged();
+    });
 }
 
 bool PlayerController::paused() const
@@ -38,9 +43,14 @@ double PlayerController::duration() const
     return m_duration;
 }
 
-void PlayerController::playFile(const QString &filePath, double startPosition)
+double PlayerController::audioDelay() const
 {
-    m_mpv->playFile(filePath, startPosition);
+    return m_audioDelay;
+}
+
+void PlayerController::playFile(const QString &filePath, double startPosition, double audioDelay)
+{
+    m_mpv->playFile(filePath, startPosition, audioDelay);
 }
 
 void PlayerController::togglePause()
@@ -56,6 +66,11 @@ void PlayerController::seekRelative(double seconds)
 void PlayerController::stop()
 {
     m_mpv->stop();
+}
+
+void PlayerController::setAudioDelay(double seconds)
+{
+    m_mpv->setAudioDelay(seconds);
 }
 
 void PlayerController::attachToWindow(QObject *windowObject)

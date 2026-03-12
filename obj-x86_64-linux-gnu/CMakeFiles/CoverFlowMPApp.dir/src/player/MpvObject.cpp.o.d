@@ -346,4 +346,6 @@ CMakeFiles/CoverFlowMPApp.dir/src/player/MpvObject.cpp.o: \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qset.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qhash.h \
  /usr/include/x86_64-linux-gnu/qt6/QtCore/qvarlengtharray.h \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/QtGlobal \
+ /usr/include/x86_64-linux-gnu/qt6/QtCore/qglobal.h \
  /usr/include/mpv/client.h

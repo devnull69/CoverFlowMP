@@ -64,4 +64,5 @@ private:
     QString m_currentFilePath;
     QString m_currentVideoName;
     double m_pendingResumePosition = 0.0;
+    double m_currentAudioDelay = 0.0;
 };

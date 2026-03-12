@@ -30,13 +30,34 @@ bool ResumeRepository::initialize()
     }
 
     QSqlQuery query(m_db);
-    return query.exec(
+    const bool created = query.exec(
         "CREATE TABLE IF NOT EXISTS playback_state ("
         "file_path TEXT PRIMARY KEY,"
         "last_position REAL NOT NULL DEFAULT 0,"
         "duration REAL NOT NULL DEFAULT 0,"
+        "audio_delay REAL NOT NULL DEFAULT 0,"
         "updated_at TEXT NOT NULL)"
         );
+
+    if (!created)
+        return false;
+
+    QSqlQuery columnsQuery(m_db);
+    if (!columnsQuery.exec("PRAGMA table_info(playback_state)"))
+        return false;
+
+    bool hasAudioDelay = false;
+    while (columnsQuery.next()) {
+        if (columnsQuery.value(1).toString() == "audio_delay") {
+            hasAudioDelay = true;
+            break;
+        }
+    }
+
+    if (hasAudioDelay)
+        return true;
+
+    return query.exec("ALTER TABLE playback_state ADD COLUMN audio_delay REAL NOT NULL DEFAULT 0");
 }
 
 double ResumeRepository::loadPosition(const QString &filePath) const
@@ -51,21 +72,38 @@ double ResumeRepository::loadPosition(const QString &filePath) const
     return 0.0;
 }
 
-bool ResumeRepository::savePosition(const QString &filePath, double position, double duration)
+double ResumeRepository::loadAudioDelay(const QString &filePath) const
+{
+    QSqlQuery query(m_db);
+    query.prepare("SELECT audio_delay FROM playback_state WHERE file_path = ?");
+    query.addBindValue(filePath);
+
+    if (query.exec() && query.next())
+        return query.value(0).toDouble();
+
+    return 0.0;
+}
+
+bool ResumeRepository::savePosition(const QString &filePath,
+                                    double position,
+                                    double duration,
+                                    double audioDelay)
 {
     QSqlQuery query(m_db);
     query.prepare(
-        "INSERT INTO playback_state(file_path, last_position, duration, updated_at) "
-        "VALUES(?, ?, ?, ?) "
+        "INSERT INTO playback_state(file_path, last_position, duration, audio_delay, updated_at) "
+        "VALUES(?, ?, ?, ?, ?) "
         "ON CONFLICT(file_path) DO UPDATE SET "
         "last_position = excluded.last_position, "
         "duration = excluded.duration, "
+        "audio_delay = excluded.audio_delay, "
         "updated_at = excluded.updated_at"
         );
 
     query.addBindValue(filePath);
     query.addBindValue(position);
     query.addBindValue(duration);
+    query.addBindValue(audioDelay);
     query.addBindValue(QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
 
     return query.exec();

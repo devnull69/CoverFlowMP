@@ -1,6 +1,7 @@
 #include "MpvObject.h"
 
 #include <QFileInfo>
+#include <QtGlobal>
 
 #include <mpv/client.h>
 
@@ -51,6 +52,7 @@ bool MpvObject::ensureInitialized()
     mpv_observe_property(m_mpv, 0, "pause", MPV_FORMAT_FLAG);
     mpv_observe_property(m_mpv, 0, "time-pos", MPV_FORMAT_DOUBLE);
     mpv_observe_property(m_mpv, 0, "duration", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(m_mpv, 0, "audio-delay", MPV_FORMAT_DOUBLE);
 
     m_eventTimer.start();
     return true;
@@ -89,6 +91,13 @@ void MpvObject::processMpvEvents()
                     m_duration = duration;
                     emit durationChanged(m_duration);
                 }
+            } else if (qstrcmp(prop->name, "audio-delay") == 0 &&
+                       prop->format == MPV_FORMAT_DOUBLE && prop->data) {
+                const double audioDelay = *static_cast<double *>(prop->data);
+                if (!qFuzzyCompare(m_audioDelay + 1.0, audioDelay + 1.0)) {
+                    m_audioDelay = audioDelay;
+                    emit audioDelayChanged(m_audioDelay);
+                }
             }
         } else if (event->event_id == MPV_EVENT_FILE_LOADED) {
             if (m_hasDeferredSeekAfterLoad && m_deferredSeekAfterLoad > 0.0) {
@@ -121,6 +130,7 @@ void MpvObject::emitStateSnapshot()
     emit positionChanged(m_position);
     emit durationChanged(m_duration);
     emit pausedChanged(m_paused);
+    emit audioDelayChanged(m_audioDelay);
 }
 
 void MpvObject::setVideoWindow(uintptr_t wid)
@@ -133,14 +143,14 @@ void MpvObject::setVideoWindow(uintptr_t wid)
     }
 
     if (m_hasPendingPlayback) {
-        playFile(m_pendingFilePath, m_pendingStartPosition);
+        playFile(m_pendingFilePath, m_pendingStartPosition, m_audioDelay);
         m_hasPendingPlayback = false;
         m_pendingFilePath.clear();
         m_pendingStartPosition = 0.0;
     }
 }
 
-void MpvObject::playFile(const QString &filePath, double startPosition)
+void MpvObject::playFile(const QString &filePath, double startPosition, double audioDelay)
 {
     if (filePath.isEmpty())
         return;
@@ -148,12 +158,15 @@ void MpvObject::playFile(const QString &filePath, double startPosition)
     if (m_videoWindowId == 0) {
         m_pendingFilePath = filePath;
         m_pendingStartPosition = startPosition;
+        m_audioDelay = audioDelay;
         m_hasPendingPlayback = true;
         return;
     }
 
     if (!ensureInitialized())
         return;
+
+    setAudioDelay(audioDelay);
 
     const QByteArray utf8File = QFileInfo(filePath).absoluteFilePath().toUtf8();
     const char *loadArgs[] = { "loadfile", utf8File.constData(), "replace", nullptr };
@@ -181,6 +194,21 @@ void MpvObject::togglePause()
     int pausedFlag = m_paused ? 1 : 0;
     mpv_set_property(m_mpv, "pause", MPV_FORMAT_FLAG, &pausedFlag);
     emit pausedChanged(m_paused);
+}
+
+void MpvObject::setAudioDelay(double seconds)
+{
+    const double clampedSeconds = qBound(-2.0, seconds, 2.0);
+
+    if (!ensureInitialized())
+        return;
+
+    if (!qFuzzyCompare(m_audioDelay + 1.0, clampedSeconds + 1.0)) {
+        m_audioDelay = clampedSeconds;
+        emit audioDelayChanged(m_audioDelay);
+    }
+
+    mpv_set_property(m_mpv, "audio-delay", MPV_FORMAT_DOUBLE, &m_audioDelay);
 }
 
 void MpvObject::seekRelative(double seconds)
@@ -225,6 +253,7 @@ void MpvObject::stop()
     m_position = 0.0;
     m_duration = 0.0;
     m_paused = false;
+    m_audioDelay = 0.0;
     emitStateSnapshot();
 }
 
@@ -241,4 +270,9 @@ double MpvObject::position() const
 double MpvObject::duration() const
 {
     return m_duration;
+}
+
+double MpvObject::audioDelay() const
+{
+    return m_audioDelay;
 }

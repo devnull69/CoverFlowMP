@@ -79,10 +79,11 @@ void AppController::startPlayback(double startPosition)
     }
 
     const QString fileToPlay = m_currentFilePath;
-    QMetaObject::invokeMethod(this, [this, fileToPlay, startPosition]() {
+    const double audioDelay = m_currentAudioDelay;
+    QMetaObject::invokeMethod(this, [this, fileToPlay, startPosition, audioDelay]() {
         if (!m_playerVisible || fileToPlay.isEmpty() || m_currentFilePath != fileToPlay)
             return;
-        m_playerController->playFile(fileToPlay, startPosition);
+        m_playerController->playFile(fileToPlay, startPosition, audioDelay);
     }, Qt::QueuedConnection);
 }
 
@@ -139,6 +140,7 @@ void AppController::playSelected(int index)
 
     m_currentFilePath = item.filePath;
     m_currentVideoName = QFileInfo(item.filePath).completeBaseName();
+    m_currentAudioDelay = m_resumeRepository->loadAudioDelay(item.filePath);
     emit currentVideoNameChanged();
 
     const double loadedResume = m_resumeRepository->loadPosition(item.filePath);
@@ -219,7 +221,11 @@ void AppController::backToBrowser()
             savePos = std::min(savePos, dur);
 
         if (!m_currentFilePath.isEmpty()) {
-            m_resumeRepository->savePosition(m_currentFilePath, savePos, dur);
+            m_resumeRepository->savePosition(
+                m_currentFilePath,
+                savePos,
+                dur,
+                m_playerController->audioDelay());
             m_libraryModel->updateResumePosition(m_currentFilePath, savePos);
         }
     }
@@ -240,6 +246,7 @@ void AppController::backToBrowser()
     emit playerVisibleChanged();
 
     m_currentFilePath.clear();
+    m_currentAudioDelay = 0.0;
     if (!m_currentVideoName.isEmpty()) {
         m_currentVideoName.clear();
         emit currentVideoNameChanged();
