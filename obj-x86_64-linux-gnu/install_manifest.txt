@@ -1,0 +1,3 @@
+/usr/bin/CoverFlowMPApp
+/usr/share/applications/coverflowmp.desktop
+/usr/share/icons/hicolor/256x256/apps/coverflowmp.png

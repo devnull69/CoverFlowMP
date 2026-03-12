@@ -6,5 +6,6 @@
         <file>qml/PlayerScreen.qml</file>
         <file>qml/PauseOverlay.qml</file>
         <file>assets/wallpaper.jpg</file>
+        <file>assets/appicon.png</file>
     </qresource>
 </RCC>

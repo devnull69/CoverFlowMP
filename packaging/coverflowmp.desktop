@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=CoverFlowMP
+Comment=CoverFlow-based media center
+Exec=CoverFlowMPApp
+Icon=coverflowmp
+Terminal=false
+Categories=AudioVideo;Player;

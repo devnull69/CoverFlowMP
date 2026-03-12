@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 
 project(CoverFlowMP VERSION 0.1 LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -72,4 +74,15 @@ target_link_libraries(CoverFlowMPApp PRIVATE
 install(TARGETS CoverFlowMPApp
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/packaging/coverflowmp.desktop
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
+)
+
+install(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/assets/appicon.png
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps
+    RENAME coverflowmp.png
 )

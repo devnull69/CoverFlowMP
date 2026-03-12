@@ -1,0 +1,6 @@
+coverflowmp (1.0.1) UNRELEASED; urgency=medium
+
+  * Initial release.
+  * Add application icon and desktop integration
+
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Thu, 12 Mar 2026 15:51:23 +0100

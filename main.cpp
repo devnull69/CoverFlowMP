@@ -3,6 +3,7 @@
 #include <QQmlContext>
 #include <QDir>
 #include <QCommandLineParser>
+#include <QIcon>
 #include <clocale>
 #include <QtGlobal>
 
@@ -22,6 +23,7 @@ int main(int argc, char *argv[])
     }
 
     QGuiApplication app(argc, argv);
+    app.setWindowIcon(QIcon(":/assets/appicon.png"));
     
     std::setlocale(LC_NUMERIC, "C");
 

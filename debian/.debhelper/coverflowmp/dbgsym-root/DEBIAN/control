@@ -1,0 +1,13 @@
+Package: coverflowmp-dbgsym
+Package-Type: ddeb
+Source: coverflowmp
+Version: 1.0.1
+Auto-Built-Package: debug-symbols
+Architecture: amd64
+Maintainer: Thomas Theiner <thomas.theiner@gmx.de>
+Installed-Size: 1042
+Depends: coverflowmp (= 1.0.1)
+Section: debug
+Priority: optional
+Description: debug symbols for coverflowmp
+Build-Ids: 9d80f44eb323a44ba51a63434497279e55316011
