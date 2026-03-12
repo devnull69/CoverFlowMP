@@ -4,6 +4,8 @@
 #include "../media/LibraryScanner.h"
 #include "../player/PlayerController.h"
 #include "../persistence/ResumeRepository.h"
+#include <QCursor>
+#include <QGuiApplication>
 #include <QMetaObject>
 
 AppController::AppController(VideoLibraryModel *libraryModel,
@@ -17,6 +19,22 @@ AppController::AppController(VideoLibraryModel *libraryModel,
     m_playerController(playerController),
     m_resumeRepository(resumeRepository)
 {
+}
+
+void AppController::setPlayerCursorHidden(bool hidden)
+{
+    if (hidden) {
+        if (!m_playerCursorHidden) {
+            QGuiApplication::setOverrideCursor(QCursor(Qt::BlankCursor));
+            m_playerCursorHidden = true;
+        }
+        return;
+    }
+
+    if (m_playerCursorHidden) {
+        QGuiApplication::restoreOverrideCursor();
+        m_playerCursorHidden = false;
+    }
 }
 
 bool AppController::playerVisible() const
@@ -51,6 +69,7 @@ void AppController::playSelected(int index)
 
     m_playerVisible = true;
     emit playerVisibleChanged();
+    setPlayerCursorHidden(true);
 
     m_currentFilePath = item.filePath;
     const QString fileToPlay = item.filePath;
@@ -64,6 +83,7 @@ void AppController::playSelected(int index)
 void AppController::backToBrowser()
 {
     m_playerController->stop();
+    setPlayerCursorHidden(false);
 
     m_playerVisible = false;
     emit playerVisibleChanged();

@@ -34,12 +34,15 @@ signals:
     void currentIndexChanged();
 
 private:
+    void setPlayerCursorHidden(bool hidden);
+
     VideoLibraryModel *m_libraryModel;
     LibraryScanner *m_scanner;
     PlayerController *m_playerController;
     ResumeRepository *m_resumeRepository;
 
     bool m_playerVisible = false;
+    bool m_playerCursorHidden = false;
     int m_currentIndex = 0;
     QString m_currentFilePath;
 };
