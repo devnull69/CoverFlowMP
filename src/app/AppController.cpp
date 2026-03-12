@@ -5,6 +5,7 @@
 #include "../player/PlayerController.h"
 #include "../persistence/ResumeRepository.h"
 #include <QCursor>
+#include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QMetaObject>
@@ -87,6 +88,7 @@ void AppController::startPlayback(double startPosition)
 
 void AppController::initialize(const QString &videoFolder)
 {
+    m_videoFolder = videoFolder;
     auto items = m_scanner->scan(videoFolder);
 
     for (auto &item : items) {
@@ -128,6 +130,33 @@ void AppController::playSelected(int index)
         }
         startPlayback(0.0);
     }
+}
+
+bool AppController::deleteCurrentVideo()
+{
+    const auto item = m_libraryModel->itemAt(m_currentIndex);
+    if (item.filePath.isEmpty())
+        return false;
+
+    m_resumeRepository->deletePosition(item.filePath);
+
+    if (!QFile::remove(item.filePath))
+        return false;
+
+    const int previousIndex = m_currentIndex;
+    initialize(m_videoFolder);
+
+    const int count = m_libraryModel->rowCount();
+    int nextIndex = 0;
+    if (count > 0)
+        nextIndex = std::clamp(previousIndex, 0, count - 1);
+
+    if (m_currentIndex != nextIndex) {
+        m_currentIndex = nextIndex;
+        emit currentIndexChanged();
+    }
+
+    return true;
 }
 
 void AppController::decideResumePlayback(bool continueFromSavedPosition)

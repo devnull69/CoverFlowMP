@@ -70,3 +70,11 @@ bool ResumeRepository::savePosition(const QString &filePath, double position, do
 
     return query.exec();
 }
+
+bool ResumeRepository::deletePosition(const QString &filePath)
+{
+    QSqlQuery query(m_db);
+    query.prepare("DELETE FROM playback_state WHERE file_path = ?");
+    query.addBindValue(filePath);
+    return query.exec();
+}

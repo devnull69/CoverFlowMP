@@ -33,6 +33,7 @@ public:
     Q_INVOKABLE void initialize(const QString &videoFolder);
     Q_INVOKABLE void playSelected(int index);
     Q_INVOKABLE void decideResumePlayback(bool continueFromSavedPosition);
+    Q_INVOKABLE bool deleteCurrentVideo();
     Q_INVOKABLE void backToBrowser();
     Q_INVOKABLE void setCurrentIndex(int index);
 
@@ -56,6 +57,7 @@ private:
     bool m_playerCursorHidden = false;
     bool m_resumePromptVisible = false;
     int m_currentIndex = 0;
+    QString m_videoFolder;
     QString m_currentFilePath;
     QString m_currentVideoName;
     double m_pendingResumePosition = 0.0;
