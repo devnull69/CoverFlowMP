@@ -29,15 +29,13 @@ Item {
 
     function moveLeft() {
         if (root.currentIndex > 0) {
-            root.currentIndex = root.currentIndex - 1
-            currentIndexChangedByUser(root.currentIndex)
+            currentIndexChangedByUser(root.currentIndex - 1)
         }
     }
 
     function moveRight() {
         if (repeater.count > 0 && root.currentIndex < repeater.count - 1) {
-            root.currentIndex = root.currentIndex + 1
-            currentIndexChangedByUser(root.currentIndex)
+            currentIndexChangedByUser(root.currentIndex + 1)
         }
     }
 
@@ -175,7 +173,7 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             anchors.margins: isCurrent ? 3 : 1
-                            visible: isFolder
+                            visible: isFolder && coverPath === ""
                             color: isParentFolder ? "#2f4f6f" : "#345c7f"
                             radius: root.coverRadius - (isCurrent ? 3 : 1)
 
@@ -257,7 +255,6 @@ Item {
                     anchors.fill: parent
 
                     onClicked: {
-                        root.currentIndex = index
                         currentIndexChangedByUser(index)
                     }
 

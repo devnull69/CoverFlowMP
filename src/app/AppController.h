@@ -58,6 +58,7 @@ private:
     bool m_playerCursorHidden = false;
     bool m_resumePromptVisible = false;
     int m_currentIndex = 0;
+    QString m_rootVideoFolder;
     QString m_videoFolder;
     QString m_currentFilePath;
     QString m_currentVideoName;

@@ -11,6 +11,11 @@ LibraryScanner::LibraryScanner(ThumbnailService *thumbnailService, QObject *pare
 {
 }
 
+void LibraryScanner::setRootFolder(const QString &rootFolder)
+{
+    m_rootFolder = QDir(rootFolder).absolutePath();
+}
+
 bool LibraryScanner::isVideoFile(const QString &suffix) const
 {
     const QString s = suffix.toLower();
@@ -43,7 +48,8 @@ QVector<VideoItem> LibraryScanner::scan(const QString &folderPath) const
 
     const QString currentPath = dir.absolutePath();
     const QString parentPath = QFileInfo(currentPath).dir().absolutePath();
-    if (parentPath != currentPath) {
+    const bool atRootLevel = !m_rootFolder.isEmpty() && currentPath == m_rootFolder;
+    if (parentPath != currentPath && !atRootLevel) {
         VideoItem parentFolder;
         parentFolder.title = "..";
         parentFolder.filePath = parentPath;
@@ -62,7 +68,8 @@ QVector<VideoItem> LibraryScanner::scan(const QString &folderPath) const
         VideoItem item;
         item.title = fi.fileName();
         item.filePath = fi.absoluteFilePath();
-        item.coverPath = "";
+        const QString folderCoverPath = fi.absoluteFilePath() + "/folder.jpg";
+        item.coverPath = QFileInfo::exists(folderCoverPath) ? folderCoverPath : "";
         item.isFolder = true;
         item.isParentFolder = false;
         item.isDemo = false;

@@ -88,6 +88,12 @@ void AppController::startPlayback(double startPosition)
 
 void AppController::initialize(const QString &videoFolder)
 {
+    if (m_rootVideoFolder.isEmpty()) {
+        m_rootVideoFolder = videoFolder;
+        if (m_scanner)
+            m_scanner->setRootFolder(m_rootVideoFolder);
+    }
+
     m_videoFolder = videoFolder;
     auto items = m_scanner->scan(videoFolder);
 

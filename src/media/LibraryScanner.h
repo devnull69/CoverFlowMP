@@ -12,6 +12,7 @@ class LibraryScanner : public QObject
 
 public:
     explicit LibraryScanner(ThumbnailService *thumbnailService, QObject *parent = nullptr);
+    void setRootFolder(const QString &rootFolder);
     QVector<VideoItem> scan(const QString &folderPath) const;
 
 private:
@@ -19,4 +20,5 @@ private:
     QVector<VideoItem> createDemoItems() const;
 
     ThumbnailService *m_thumbnailService;
+    QString m_rootFolder;
 };
