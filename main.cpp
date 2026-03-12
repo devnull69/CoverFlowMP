@@ -2,6 +2,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QDir>
+#include <QCommandLineParser>
 #include <clocale>
 #include <QtGlobal>
 
@@ -34,8 +35,18 @@ int main(int argc, char *argv[])
     PlayerController playerController;
     AppController appController(&libraryModel, &scanner, &playerController, &resumeRepository);
 
-    // Für den Anfang hart verdrahtet; später über Settings/Dialog
-    const QString videoFolder = QDir::homePath() + "/Videos";
+    QCommandLineParser parser;
+    parser.setApplicationDescription("CoverFlowMP");
+    parser.addHelpOption();
+    parser.addPositionalArgument("video_root", "Optionaler Root-Ordner fuer die Videobibliothek.");
+    parser.process(app);
+
+    QString videoFolder = QDir::homePath() + "/Videos";
+    const QStringList positionalArgs = parser.positionalArguments();
+    if (!positionalArgs.isEmpty()) {
+        videoFolder = QDir(positionalArgs.first()).absolutePath();
+    }
+
     appController.initialize(videoFolder);
 
     QQmlApplicationEngine engine;
