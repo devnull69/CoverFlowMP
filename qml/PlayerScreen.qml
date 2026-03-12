@@ -39,6 +39,7 @@ Item {
             anchors.fill: parent
             position: playerController.position
             duration: playerController.duration
+            videoName: appController.currentVideoName
         }
     }
 

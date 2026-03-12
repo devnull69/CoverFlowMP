@@ -2,8 +2,10 @@ import QtQuick
 import QtQuick.Controls
 
 Item {
+    id: root
     property double position: 0
     property double duration: 0
+    property string videoName: ""
 
     function pad2(value) {
         return value < 10 ? "0" + value : "" + value
@@ -30,6 +32,7 @@ Item {
         Column {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -root.height * 0.10
             spacing: parent.height * 0.08
             width: parent.width * 0.7
 
@@ -61,12 +64,36 @@ Item {
                 }
             }
 
+            Row {
+                width: contentColumn.width
+                spacing: 0
+
+                Text {
+                    text: formatTime(position)
+                    color: "white"
+                    horizontalAlignment: Text.AlignLeft
+                    width: parent.width * 0.5
+                    font.pixelSize: Math.max(20, contentColumn.parent.height * 0.24)
+                    font.bold: true
+                }
+
+                Text {
+                    text: formatTime(Math.max(0, duration - position))
+                    color: "white"
+                    horizontalAlignment: Text.AlignRight
+                    width: parent.width * 0.5
+                    font.pixelSize: Math.max(20, contentColumn.parent.height * 0.24)
+                    font.bold: true
+                }
+            }
+
             Text {
-                text: formatTime(position) + " / " + formatTime(duration)
+                text: videoName
                 color: "white"
                 horizontalAlignment: Text.AlignHCenter
                 width: contentColumn.width
-                font.pixelSize: Math.max(20, parent.height * 0.24)
+                elide: Text.ElideMiddle
+                font.pixelSize: Math.max(26, contentColumn.parent.height * 0.30)
                 font.bold: true
             }
             }

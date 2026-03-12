@@ -13,6 +13,7 @@ class AppController : public QObject
     Q_OBJECT
     Q_PROPERTY(bool playerVisible READ playerVisible NOTIFY playerVisibleChanged)
     Q_PROPERTY(int currentIndex READ currentIndex NOTIFY currentIndexChanged)
+    Q_PROPERTY(QString currentVideoName READ currentVideoName NOTIFY currentVideoNameChanged)
 
 public:
     explicit AppController(VideoLibraryModel *libraryModel,
@@ -23,6 +24,7 @@ public:
 
     bool playerVisible() const;
     int currentIndex() const;
+    QString currentVideoName() const;
 
     Q_INVOKABLE void initialize(const QString &videoFolder);
     Q_INVOKABLE void playSelected(int index);
@@ -32,6 +34,7 @@ public:
 signals:
     void playerVisibleChanged();
     void currentIndexChanged();
+    void currentVideoNameChanged();
 
 private:
     void setPlayerCursorHidden(bool hidden);
@@ -45,4 +48,5 @@ private:
     bool m_playerCursorHidden = false;
     int m_currentIndex = 0;
     QString m_currentFilePath;
+    QString m_currentVideoName;
 };

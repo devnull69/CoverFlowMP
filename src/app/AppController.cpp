@@ -5,6 +5,7 @@
 #include "../player/PlayerController.h"
 #include "../persistence/ResumeRepository.h"
 #include <QCursor>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QMetaObject>
 
@@ -47,6 +48,11 @@ int AppController::currentIndex() const
     return m_currentIndex;
 }
 
+QString AppController::currentVideoName() const
+{
+    return m_currentVideoName;
+}
+
 void AppController::initialize(const QString &videoFolder)
 {
     auto items = m_scanner->scan(videoFolder);
@@ -72,6 +78,8 @@ void AppController::playSelected(int index)
     setPlayerCursorHidden(true);
 
     m_currentFilePath = item.filePath;
+    m_currentVideoName = QFileInfo(item.filePath).completeBaseName();
+    emit currentVideoNameChanged();
     const QString fileToPlay = item.filePath;
     QMetaObject::invokeMethod(this, [this, fileToPlay]() {
         if (!m_playerVisible)
@@ -89,6 +97,10 @@ void AppController::backToBrowser()
     emit playerVisibleChanged();
 
     m_currentFilePath.clear();
+    if (!m_currentVideoName.isEmpty()) {
+        m_currentVideoName.clear();
+        emit currentVideoNameChanged();
+    }
 }
 
 void AppController::setCurrentIndex(int index)
