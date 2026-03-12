@@ -46,6 +46,16 @@ Item {
         playerController.togglePause()
     }
 
+    Keys.onLeftPressed: function(event) {
+        playerController.seekRelative(-10.0)
+        event.accepted = true
+    }
+
+    Keys.onRightPressed: function(event) {
+        playerController.seekRelative(10.0)
+        event.accepted = true
+    }
+
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_B) {
             appController.backToBrowser()

@@ -56,7 +56,7 @@ Item {
                 Rectangle {
                     width: duration > 0 ? parent.width * (position / duration) : 0
                     height: parent.height
-                    color: "white"
+                    color: "#39C5FF"
                     radius: parent.radius
                 }
             }

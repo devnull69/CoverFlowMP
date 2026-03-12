@@ -173,6 +173,28 @@ void MpvObject::togglePause()
     emit pausedChanged(m_paused);
 }
 
+void MpvObject::seekRelative(double seconds)
+{
+    if (!m_mpv)
+        return;
+
+    double target = m_position + seconds;
+    if (target < 0.0)
+        target = 0.0;
+    if (m_duration > 0.0 && target > m_duration)
+        target = m_duration;
+
+    const QByteArray seekPos = QByteArray::number(target, 'f', 3);
+    const char *seekArgs[] = { "seek", seekPos.constData(), "absolute+exact", nullptr };
+    if (mpv_command(m_mpv, seekArgs) < 0)
+        return;
+
+    if (!qFuzzyCompare(m_position + 1.0, target + 1.0)) {
+        m_position = target;
+        emit positionChanged(m_position);
+    }
+}
+
 void MpvObject::stop()
 {
     m_eventTimer.stop();

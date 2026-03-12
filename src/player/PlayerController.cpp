@@ -48,6 +48,11 @@ void PlayerController::togglePause()
     m_mpv->togglePause();
 }
 
+void PlayerController::seekRelative(double seconds)
+{
+    m_mpv->seekRelative(seconds);
+}
+
 void PlayerController::stop()
 {
     m_mpv->stop();

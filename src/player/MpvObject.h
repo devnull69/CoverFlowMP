@@ -16,6 +16,7 @@ public:
 
     void playFile(const QString &filePath, double startPosition);
     void togglePause();
+    void seekRelative(double seconds);
     void stop();
     void setVideoWindow(uintptr_t wid);
 
