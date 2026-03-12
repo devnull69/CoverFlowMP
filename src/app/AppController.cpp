@@ -116,7 +116,7 @@ void AppController::playSelected(int index)
     const double loadedResume = m_resumeRepository->loadPosition(item.filePath);
     const double resumePosition = std::isfinite(loadedResume) ? std::max(0.0, loadedResume) : 0.0;
 
-    if (resumePosition > 0.0) {
+    if (resumePosition > 3.0) {
         m_pendingResumePosition = resumePosition;
         emit pendingResumePositionChanged();
         m_resumePromptVisible = true;
