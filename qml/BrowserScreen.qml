@@ -7,6 +7,8 @@ Item {
     focus: true
     property bool deleteDialogVisible: false
     property int deleteChoiceIndex: 1 // 0 = JA, 1 = NEIN (default)
+    property bool resetDialogVisible: false
+    property int resetChoiceIndex: 1 // 0 = JA, 1 = NEIN (default)
 
     Component.onCompleted: {
         forceActiveFocus()
@@ -15,7 +17,7 @@ Item {
     Keys.onEscapePressed: Qt.quit()
 
     Keys.onLeftPressed: function(event) {
-        if (root.deleteDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible) {
             event.accepted = true
             return
         }
@@ -24,7 +26,7 @@ Item {
     }
 
     Keys.onRightPressed: function(event) {
-        if (root.deleteDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible) {
             event.accepted = true
             return
         }
@@ -40,6 +42,13 @@ Item {
             event.accepted = true
             return
         }
+        if (root.resetDialogVisible) {
+            if (root.resetChoiceIndex === 0)
+                appController.resetResumeDatabase()
+            root.resetDialogVisible = false
+            event.accepted = true
+            return
+        }
         appController.playSelected(appController.currentIndex)
         event.accepted = true
     }
@@ -52,34 +61,62 @@ Item {
             event.accepted = true
             return
         }
+        if (root.resetDialogVisible) {
+            if (root.resetChoiceIndex === 0)
+                appController.resetResumeDatabase()
+            root.resetDialogVisible = false
+            event.accepted = true
+            return
+        }
         appController.playSelected(appController.currentIndex)
         event.accepted = true
     }
 
     Keys.onUpPressed: function(event) {
-        if (!root.deleteDialogVisible)
+        if (root.deleteDialogVisible) {
+            root.deleteChoiceIndex = 0
+            event.accepted = true
             return
-        root.deleteChoiceIndex = 0
-        event.accepted = true
+        }
+        if (root.resetDialogVisible) {
+            root.resetChoiceIndex = 0
+            event.accepted = true
+        }
     }
 
     Keys.onDownPressed: function(event) {
-        if (!root.deleteDialogVisible)
+        if (root.deleteDialogVisible) {
+            root.deleteChoiceIndex = 1
+            event.accepted = true
             return
-        root.deleteChoiceIndex = 1
-        event.accepted = true
+        }
+        if (root.resetDialogVisible) {
+            root.resetChoiceIndex = 1
+            event.accepted = true
+        }
     }
 
     Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_0 && !root.deleteDialogVisible && appController.canDeleteCurrentVideo()) {
+        if (event.key === Qt.Key_0
+                && !root.deleteDialogVisible
+                && !root.resetDialogVisible
+                && appController.canDeleteCurrentVideo()) {
             root.deleteChoiceIndex = 1
             root.deleteDialogVisible = true
             event.accepted = true
             return
         }
 
-        if (root.deleteDialogVisible && event.key === Qt.Key_B) {
+        if (event.key === Qt.Key_R && !root.deleteDialogVisible && !root.resetDialogVisible) {
+            root.resetChoiceIndex = 1
+            root.resetDialogVisible = true
+            event.accepted = true
+            return
+        }
+
+        if ((root.deleteDialogVisible || root.resetDialogVisible) && event.key === Qt.Key_B) {
             root.deleteDialogVisible = false
+            root.resetDialogVisible = false
             event.accepted = true
         }
     }
@@ -170,6 +207,75 @@ Item {
                     color: "white"
                     font.bold: true
                     font.pixelSize: Math.max(22, deleteDialog.height * 0.09)
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        id: resetDialog
+        visible: root.resetDialogVisible
+        anchors.centerIn: parent
+        width: parent.width * 0.42
+        height: parent.height * 0.40
+        radius: 14
+        color: "#D91A1A1A"
+        border.width: 1
+        border.color: "#808080"
+        clip: true
+
+        Column {
+            id: resetDialogContent
+            anchors.fill: parent
+            anchors.margins: resetDialog.height * 0.08
+            spacing: resetDialog.height * 0.06
+
+            Text {
+                width: resetDialogContent.width
+                horizontalAlignment: Text.AlignHCenter
+                color: "white"
+                wrapMode: Text.WordWrap
+                font.pixelSize: Math.max(20, resetDialog.height * 0.09)
+                font.bold: true
+                text: "Datenbank-Reset?"
+            }
+
+            Item {
+                width: resetDialogContent.width
+                height: resetDialog.height * 0.03
+            }
+
+            Rectangle {
+                width: resetDialogContent.width
+                height: Math.max(56, resetDialog.height * 0.20)
+                radius: 8
+                color: root.resetChoiceIndex === 0 ? "#2AA84A" : "#303030"
+                border.width: 1
+                border.color: root.resetChoiceIndex === 0 ? "#7CF1A3" : "#666666"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "JA"
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: Math.max(22, resetDialog.height * 0.10)
+                }
+            }
+
+            Rectangle {
+                width: resetDialogContent.width
+                height: Math.max(56, resetDialog.height * 0.20)
+                radius: 8
+                color: root.resetChoiceIndex === 1 ? "#2AA84A" : "#303030"
+                border.width: 1
+                border.color: root.resetChoiceIndex === 1 ? "#7CF1A3" : "#666666"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "NEIN"
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: Math.max(22, resetDialog.height * 0.09)
                 }
             }
         }

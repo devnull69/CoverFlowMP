@@ -78,3 +78,9 @@ bool ResumeRepository::deletePosition(const QString &filePath)
     query.addBindValue(filePath);
     return query.exec();
 }
+
+bool ResumeRepository::clearAllPositions()
+{
+    QSqlQuery query(m_db);
+    return query.exec("DELETE FROM playback_state");
+}

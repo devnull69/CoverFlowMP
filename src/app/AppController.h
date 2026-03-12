@@ -35,6 +35,7 @@ public:
     Q_INVOKABLE void decideResumePlayback(bool continueFromSavedPosition);
     Q_INVOKABLE bool canDeleteCurrentVideo() const;
     Q_INVOKABLE bool deleteCurrentVideo();
+    Q_INVOKABLE bool resetResumeDatabase();
     Q_INVOKABLE void backToBrowser();
     Q_INVOKABLE void setCurrentIndex(int index);
 

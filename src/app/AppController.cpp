@@ -191,6 +191,15 @@ bool AppController::canDeleteCurrentVideo() const
     return !item.filePath.isEmpty() && !item.isFolder;
 }
 
+bool AppController::resetResumeDatabase()
+{
+    if (!m_resumeRepository->clearAllPositions())
+        return false;
+
+    initialize(m_videoFolder);
+    return true;
+}
+
 void AppController::decideResumePlayback(bool continueFromSavedPosition)
 {
     if (!m_resumePromptVisible)
