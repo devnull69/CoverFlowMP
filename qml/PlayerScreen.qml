@@ -4,6 +4,7 @@ import QtQuick.Window
 
 Item {
     id: root
+    anchors.fill: parent
     focus: true
 
     Component.onCompleted: {
@@ -25,14 +26,14 @@ Item {
     Window {
         id: pauseOverlayWindow
         visible: root.visible && playerController.paused
-        transientParent: Window.window
+        transientParent: root.Window.window
         flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
         color: "transparent"
 
-        x: Window.window ? Window.window.x : 0
-        y: Window.window ? Window.window.y : 0
-        width: Window.window ? Window.window.width : 0
-        height: Window.window ? Window.window.height : 0
+        x: root.Window.window ? root.Window.window.x : 0
+        y: root.Window.window ? root.Window.window.y : 0
+        width: root.width
+        height: root.height
 
         PauseOverlay {
             anchors.fill: parent
