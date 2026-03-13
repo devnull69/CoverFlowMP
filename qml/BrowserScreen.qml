@@ -9,6 +9,7 @@ Item {
     property int deleteChoiceIndex: 1 // 0 = JA, 1 = NEIN (default)
     property bool resetDialogVisible: false
     property int resetChoiceIndex: 1 // 0 = JA, 1 = NEIN (default)
+    property bool messageDialogVisible: false
 
     Component.onCompleted: {
         forceActiveFocus()
@@ -17,7 +18,7 @@ Item {
     Keys.onEscapePressed: Qt.quit()
 
     Keys.onLeftPressed: function(event) {
-        if (root.deleteDialogVisible || root.resetDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) {
             event.accepted = true
             return
         }
@@ -26,7 +27,7 @@ Item {
     }
 
     Keys.onRightPressed: function(event) {
-        if (root.deleteDialogVisible || root.resetDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) {
             event.accepted = true
             return
         }
@@ -49,6 +50,12 @@ Item {
             event.accepted = true
             return
         }
+        if (root.messageDialogVisible) {
+            appController.clearPlayerMessage()
+            root.messageDialogVisible = false
+            event.accepted = true
+            return
+        }
         appController.playSelected(appController.currentIndex)
         event.accepted = true
     }
@@ -68,11 +75,21 @@ Item {
             event.accepted = true
             return
         }
+        if (root.messageDialogVisible) {
+            appController.clearPlayerMessage()
+            root.messageDialogVisible = false
+            event.accepted = true
+            return
+        }
         appController.playSelected(appController.currentIndex)
         event.accepted = true
     }
 
     Keys.onUpPressed: function(event) {
+        if (root.messageDialogVisible) {
+            event.accepted = true
+            return
+        }
         if (root.deleteDialogVisible) {
             root.deleteChoiceIndex = 0
             event.accepted = true
@@ -85,6 +102,10 @@ Item {
     }
 
     Keys.onDownPressed: function(event) {
+        if (root.messageDialogVisible) {
+            event.accepted = true
+            return
+        }
         if (root.deleteDialogVisible) {
             root.deleteChoiceIndex = 1
             event.accepted = true
@@ -107,6 +128,16 @@ Item {
             return
         }
 
+        if (event.key === Qt.Key_F
+                && !root.deleteDialogVisible
+                && !root.resetDialogVisible
+                && !root.messageDialogVisible) {
+            appController.toggleFastMode()
+            root.messageDialogVisible = true
+            event.accepted = true
+            return
+        }
+
         if (event.key === Qt.Key_R && !root.deleteDialogVisible && !root.resetDialogVisible) {
             root.resetChoiceIndex = 1
             root.resetDialogVisible = true
@@ -114,10 +145,21 @@ Item {
             return
         }
 
-        if ((root.deleteDialogVisible || root.resetDialogVisible) && event.key === Qt.Key_B) {
+        if ((root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) && event.key === Qt.Key_B) {
             root.deleteDialogVisible = false
             root.resetDialogVisible = false
+            root.messageDialogVisible = false
+            appController.clearPlayerMessage()
             event.accepted = true
+        }
+    }
+
+    Connections {
+        target: appController
+
+        function onPlayerMessageChanged() {
+            root.messageDialogVisible = appController.playerMessage !== ""
+            root.forceActiveFocus()
         }
     }
 
@@ -276,6 +318,59 @@ Item {
                     color: "white"
                     font.bold: true
                     font.pixelSize: Math.max(22, resetDialog.height * 0.09)
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        id: messageDialog
+        visible: root.messageDialogVisible
+        anchors.centerIn: parent
+        width: parent.width * 0.42
+        height: parent.height * 0.32
+        radius: 14
+        color: "#D91A1A1A"
+        border.width: 1
+        border.color: "#808080"
+        clip: true
+
+        Column {
+            id: messageDialogContent
+            anchors.fill: parent
+            anchors.margins: messageDialog.height * 0.10
+            spacing: messageDialog.height * 0.08
+
+            Text {
+                width: messageDialogContent.width
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: "white"
+                wrapMode: Text.WordWrap
+                font.pixelSize: Math.max(20, messageDialog.height * 0.12)
+                font.bold: true
+                text: appController.playerMessage
+            }
+
+            Item {
+                width: messageDialogContent.width
+                height: messageDialog.height * 0.05
+            }
+
+            Rectangle {
+                width: messageDialogContent.width
+                height: Math.max(56, messageDialog.height * 0.26)
+                radius: 8
+                color: "#2AA84A"
+                border.width: 1
+                border.color: "#7CF1A3"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "OK"
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: Math.max(22, messageDialog.height * 0.12)
                 }
             }
         }

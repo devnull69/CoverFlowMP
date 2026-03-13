@@ -86,8 +86,8 @@ Item {
             videoName: appController.currentVideoName
             audioDelay: playerController.audioDelay
             audioDelayMode: root.audioDelayMode
-            skipRanges: playerController.skipRanges
-            skipRangePending: playerController.skipRangePending
+            skipRanges: appController.fastMode ? [] : playerController.skipRanges
+            skipRangePending: appController.fastMode ? false : playerController.skipRangePending
             pendingSkipStart: playerController.pendingSkipStart
         }
 
@@ -341,7 +341,7 @@ Item {
             return
         }
 
-        if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_S) {
+        if (playerController.paused && !root.audioDelayMode && !appController.fastMode && event.key === Qt.Key_S) {
             playerController.markSkipBoundary()
             event.accepted = true
             return
@@ -359,7 +359,7 @@ Item {
             return
         }
 
-        if (playerController.paused && !root.audioDelayMode
+        if (playerController.paused && !root.audioDelayMode && !appController.fastMode
                 && (event.key === Qt.Key_C || event.key === Qt.Key_Backspace)) {
             playerController.clearPendingSkipRange()
             event.accepted = true

@@ -86,6 +86,11 @@ double PlayerController::pendingSkipStart() const
     return m_pendingSkipStart;
 }
 
+bool PlayerController::skipHandlingEnabled() const
+{
+    return m_skipHandlingEnabled;
+}
+
 QVector<SkipRange> PlayerController::skipRangesData() const
 {
     return m_skipRanges;
@@ -113,7 +118,15 @@ void PlayerController::seekRelative(double seconds)
         ? SeekDirection::Forward
         : SeekDirection::Backward;
 
-    const double target = resolveSeekTarget(m_position + seconds, direction);
+    double target = m_position + seconds;
+    if (!m_skipHandlingEnabled) {
+        if (target < 0.0)
+            target = 0.0;
+        if (m_duration > 0.0 && target > m_duration)
+            target = m_duration;
+    } else {
+        target = resolveSeekTarget(target, direction);
+    }
     if (m_duration > 0.0 && target >= m_duration) {
         requestPlaybackFinished();
         return;
@@ -141,7 +154,7 @@ void PlayerController::stepFrameBackward()
 
 void PlayerController::markSkipBoundary()
 {
-    if (!m_paused)
+    if (!m_paused || !m_skipHandlingEnabled)
         return;
 
     if (!m_skipRangePending) {
@@ -196,9 +209,21 @@ void PlayerController::setSkipRanges(const QVector<SkipRange> &ranges)
     emit skipRangesChanged();
 }
 
+void PlayerController::setSkipHandlingEnabled(bool enabled)
+{
+    if (m_skipHandlingEnabled == enabled)
+        return;
+
+    m_skipHandlingEnabled = enabled;
+    if (!m_skipHandlingEnabled)
+        clearPendingSkipRange();
+
+    emit skipHandlingEnabledChanged();
+}
+
 void PlayerController::maybeSkipCurrentPosition()
 {
-    if (m_paused || m_skipRanges.isEmpty())
+    if (!m_skipHandlingEnabled || m_paused || m_skipRanges.isEmpty())
         return;
 
     for (const SkipRange &range : m_skipRanges) {

@@ -89,6 +89,11 @@ QString AppController::playerMessage() const
     return m_playerMessage;
 }
 
+bool AppController::fastMode() const
+{
+    return m_fastMode;
+}
+
 void AppController::startPlayback(double startPosition)
 {
     if (m_resumePromptVisible) {
@@ -164,7 +169,9 @@ void AppController::playSelected(int index)
     m_currentFilePath = item.filePath;
     m_currentVideoName = QFileInfo(item.filePath).completeBaseName();
     m_currentAudioDelay = m_resumeRepository->loadAudioDelay(item.filePath);
-    m_playerController->setSkipRanges(m_resumeRepository->loadSkipRanges(item.filePath));
+    m_playerController->setSkipHandlingEnabled(!m_fastMode);
+    m_playerController->setSkipRanges(
+        m_fastMode ? QVector<SkipRange>() : m_resumeRepository->loadSkipRanges(item.filePath));
     emit currentVideoNameChanged();
 
     const double loadedResume = m_resumeRepository->loadPosition(item.filePath);
@@ -234,7 +241,9 @@ bool AppController::exportCurrentSkipRanges()
         return false;
     }
 
-    const QVector<SkipRange> ranges = m_playerController->skipRangesData();
+    const QVector<SkipRange> ranges = m_fastMode
+        ? m_resumeRepository->loadSkipRanges(m_currentFilePath)
+        : m_playerController->skipRangesData();
     if (ranges.isEmpty()) {
         setPlayerMessage("Keine Skip-Bereiche zum Exportieren vorhanden.");
         return false;
@@ -338,10 +347,11 @@ bool AppController::importCurrentSkipRanges()
     }
 
     m_playerController->clearPendingSkipRange();
-    m_playerController->setSkipRanges(ranges);
+    if (!m_fastMode)
+        m_playerController->setSkipRanges(ranges);
     if (!m_resumeRepository->saveSkipRanges(
         m_currentFilePath,
-        m_playerController->skipRangesData())) {
+        m_fastMode ? ranges : m_playerController->skipRangesData())) {
         setPlayerMessage("Import fehlgeschlagen.");
         return false;
     }
@@ -352,6 +362,20 @@ bool AppController::importCurrentSkipRanges()
 void AppController::clearPlayerMessage()
 {
     setPlayerMessage(QString());
+}
+
+void AppController::toggleFastMode()
+{
+    m_fastMode = !m_fastMode;
+    m_playerController->setSkipHandlingEnabled(!m_fastMode);
+    m_playerController->clearPendingSkipRange();
+    m_playerController->setSkipRanges({});
+    emit fastModeChanged();
+
+    if (m_fastMode)
+        setPlayerMessage("Fast-Modus aktiviert. Skip-Bereiche sind deaktiviert.");
+    else
+        setPlayerMessage("Normalmodus aktiviert. Skip-Bereiche werden wieder beruecksichtigt.");
 }
 
 void AppController::decideResumePlayback(bool continueFromSavedPosition)
@@ -386,6 +410,7 @@ void AppController::closePlayer(bool saveResumePosition)
 
     m_currentFilePath.clear();
     m_playerController->stop();
+    m_playerController->setSkipHandlingEnabled(!m_fastMode);
     m_playerController->setSkipRanges({});
     setPlayerCursorHidden(false);
 

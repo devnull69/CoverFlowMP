@@ -19,6 +19,7 @@ class PlayerController : public QObject
     Q_PROPERTY(QVariantList skipRanges READ skipRanges NOTIFY skipRangesChanged)
     Q_PROPERTY(bool skipRangePending READ skipRangePending NOTIFY skipRangePendingChanged)
     Q_PROPERTY(double pendingSkipStart READ pendingSkipStart NOTIFY pendingSkipStartChanged)
+    Q_PROPERTY(bool skipHandlingEnabled READ skipHandlingEnabled NOTIFY skipHandlingEnabledChanged)
 
 public:
     explicit PlayerController(QObject *parent = nullptr);
@@ -30,6 +31,7 @@ public:
     QVariantList skipRanges() const;
     bool skipRangePending() const;
     double pendingSkipStart() const;
+    bool skipHandlingEnabled() const;
     QVector<SkipRange> skipRangesData() const;
 
     Q_INVOKABLE void playFile(const QString &filePath, double startPosition = 0.0, double audioDelay = 0.0);
@@ -43,6 +45,7 @@ public:
     Q_INVOKABLE void attachToWindow(QObject *windowObject);
     Q_INVOKABLE void setAudioDelay(double seconds);
     void setSkipRanges(const QVector<SkipRange> &ranges);
+    void setSkipHandlingEnabled(bool enabled);
 
 signals:
     void pausedChanged();
@@ -53,6 +56,7 @@ signals:
     void skipRangesChanged();
     void skipRangePendingChanged();
     void pendingSkipStartChanged();
+    void skipHandlingEnabledChanged();
 
 private:
     enum class SeekDirection {
@@ -75,6 +79,7 @@ private:
     QVector<SkipRange> m_skipRanges;
     bool m_skipRangePending = false;
     double m_pendingSkipStart = 0.0;
+    bool m_skipHandlingEnabled = true;
     bool m_skipJumpInProgress = false;
     bool m_playbackFinishedPending = false;
 };

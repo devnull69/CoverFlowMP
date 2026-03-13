@@ -17,6 +17,7 @@ class AppController : public QObject
     Q_PROPERTY(bool resumePromptVisible READ resumePromptVisible NOTIFY resumePromptVisibleChanged)
     Q_PROPERTY(double pendingResumePosition READ pendingResumePosition NOTIFY pendingResumePositionChanged)
     Q_PROPERTY(QString playerMessage READ playerMessage NOTIFY playerMessageChanged)
+    Q_PROPERTY(bool fastMode READ fastMode NOTIFY fastModeChanged)
 
 public:
     explicit AppController(VideoLibraryModel *libraryModel,
@@ -31,6 +32,7 @@ public:
     bool resumePromptVisible() const;
     double pendingResumePosition() const;
     QString playerMessage() const;
+    bool fastMode() const;
 
     Q_INVOKABLE void initialize(const QString &videoFolder);
     Q_INVOKABLE void playSelected(int index);
@@ -41,6 +43,7 @@ public:
     Q_INVOKABLE bool exportCurrentSkipRanges();
     Q_INVOKABLE bool importCurrentSkipRanges();
     Q_INVOKABLE void clearPlayerMessage();
+    Q_INVOKABLE void toggleFastMode();
     Q_INVOKABLE void backToBrowser();
     Q_INVOKABLE void setCurrentIndex(int index);
 
@@ -51,6 +54,7 @@ signals:
     void resumePromptVisibleChanged();
     void pendingResumePositionChanged();
     void playerMessageChanged();
+    void fastModeChanged();
 
 private:
     void closePlayer(bool saveResumePosition);
@@ -73,6 +77,7 @@ private:
     QString m_currentFilePath;
     QString m_currentVideoName;
     QString m_playerMessage;
+    bool m_fastMode = false;
     double m_pendingResumePosition = 0.0;
     double m_currentAudioDelay = 0.0;
 };
