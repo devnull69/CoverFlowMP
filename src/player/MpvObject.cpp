@@ -121,6 +121,7 @@ void MpvObject::processMpvEvents()
                 m_paused = false;
                 emit pausedChanged(m_paused);
             }
+            emit playbackFinished();
         }
     }
 }

@@ -33,6 +33,7 @@ signals:
     void positionChanged();
     void durationChanged();
     void audioDelayChanged();
+    void playbackFinished();
 
 private:
     MpvObject *m_mpv;

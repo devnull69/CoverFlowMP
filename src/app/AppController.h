@@ -47,6 +47,8 @@ signals:
     void pendingResumePositionChanged();
 
 private:
+    void closePlayer(bool saveResumePosition);
+    void handlePlaybackFinished();
     void setPlayerCursorHidden(bool hidden);
     void startPlayback(double startPosition);
 

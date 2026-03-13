@@ -31,6 +31,7 @@ signals:
     void positionChanged(double position);
     void durationChanged(double duration);
     void audioDelayChanged(double audioDelay);
+    void playbackFinished();
 
 private:
     bool ensureInitialized();

@@ -26,6 +26,10 @@ PlayerController::PlayerController(QObject *parent)
         m_audioDelay = audioDelay;
         emit audioDelayChanged();
     });
+
+    connect(m_mpv, &MpvObject::playbackFinished, this, [this]() {
+        emit playbackFinished();
+    });
 }
 
 bool PlayerController::paused() const

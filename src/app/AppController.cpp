@@ -23,6 +23,9 @@ AppController::AppController(VideoLibraryModel *libraryModel,
     m_playerController(playerController),
     m_resumeRepository(resumeRepository)
 {
+    connect(m_playerController, &PlayerController::playbackFinished,
+            this, &AppController::handlePlaybackFinished,
+            Qt::QueuedConnection);
 }
 
 void AppController::setPlayerCursorHidden(bool hidden)
@@ -211,9 +214,9 @@ void AppController::decideResumePlayback(bool continueFromSavedPosition)
     startPlayback(startPosition);
 }
 
-void AppController::backToBrowser()
+void AppController::closePlayer(bool saveResumePosition)
 {
-    if (!m_resumePromptVisible) {
+    if (saveResumePosition && !m_resumePromptVisible) {
         const double pos = m_playerController->position();
         const double dur = m_playerController->duration();
         double savePos = std::max(0.0, pos);
@@ -251,6 +254,21 @@ void AppController::backToBrowser()
         m_currentVideoName.clear();
         emit currentVideoNameChanged();
     }
+}
+
+void AppController::handlePlaybackFinished()
+{
+    if (!m_currentFilePath.isEmpty()) {
+        m_resumeRepository->deletePosition(m_currentFilePath);
+        m_libraryModel->updateResumePosition(m_currentFilePath, 0.0);
+    }
+
+    closePlayer(false);
+}
+
+void AppController::backToBrowser()
+{
+    closePlayer(true);
 }
 
 void AppController::setCurrentIndex(int index)
