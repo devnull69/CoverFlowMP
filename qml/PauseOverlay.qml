@@ -46,6 +46,7 @@ Item {
     }
 
     Item {
+        id: overlayArea
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
@@ -73,7 +74,7 @@ Item {
 
                 Rectangle {
                     width: contentColumn.width
-                    height: Math.max(16, parent.height * 0.24)
+                    height: Math.max(8, overlayArea.height * 0.12)
                     color: "#404040"
                     radius: height / 2
                     clip: true
@@ -121,7 +122,7 @@ Item {
                         color: "white"
                         horizontalAlignment: Text.AlignLeft
                         width: parent.width * 0.5
-                        font.pixelSize: Math.max(20, contentColumn.parent.height * 0.24)
+                        font.pixelSize: Math.max(8, overlayArea.height * 0.096)
                         font.bold: true
                     }
 
@@ -130,7 +131,7 @@ Item {
                         color: "white"
                         horizontalAlignment: Text.AlignRight
                         width: parent.width * 0.5
-                        font.pixelSize: Math.max(20, contentColumn.parent.height * 0.24)
+                        font.pixelSize: Math.max(8, overlayArea.height * 0.096)
                         font.bold: true
                     }
                 }
@@ -141,18 +142,25 @@ Item {
                     color: "white"
                     horizontalAlignment: Text.AlignHCenter
                     width: contentColumn.width
-                    font.pixelSize: Math.max(20, contentColumn.parent.height * 0.24)
+                    font.pixelSize: Math.max(8, overlayArea.height * 0.096)
                     font.bold: true
                 }
 
-                Text {
-                    visible: !root.audioDelayMode && root.skipRangePending
-                    text: "Skip-Start: " + formatTime(root.pendingSkipStart) + "   S=Ende   C=Abbrechen   +/-=Frame"
-                    color: "#FFB3B3"
-                    horizontalAlignment: Text.AlignHCenter
+                Item {
+                    visible: !root.audioDelayMode
                     width: contentColumn.width
-                    font.pixelSize: Math.max(18, contentColumn.parent.height * 0.18)
-                    font.bold: true
+                    height: Math.max(12, overlayArea.height * 0.09)
+
+                    Text {
+                        anchors.fill: parent
+                        visible: root.skipRangePending
+                        text: "Skip-Start: " + formatTime(root.pendingSkipStart) + "   S=Ende   C=Abbrechen   +/-=Frame"
+                        color: "#FFB3B3"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: Math.max(7, overlayArea.height * 0.072)
+                        font.bold: true
+                    }
                 }
 
                 Text {
@@ -161,7 +169,7 @@ Item {
                     horizontalAlignment: Text.AlignHCenter
                     width: contentColumn.width
                     elide: Text.ElideMiddle
-                    font.pixelSize: Math.max(26, contentColumn.parent.height * 0.30)
+                    font.pixelSize: Math.max(10, overlayArea.height * 0.12)
                     font.bold: true
                 }
             }

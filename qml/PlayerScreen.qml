@@ -7,6 +7,7 @@ Item {
     anchors.fill: parent
     focus: true
     property int resumeChoiceIndex: 0
+    property bool messageDialogVisible: false
     property bool audioDelayMode: false
     readonly property int audioDelayStepMs: 50
     readonly property int audioDelayMaxMs: 2000
@@ -89,6 +90,59 @@ Item {
             skipRangePending: playerController.skipRangePending
             pendingSkipStart: playerController.pendingSkipStart
         }
+
+        Rectangle {
+            id: messageDialog
+            visible: root.messageDialogVisible
+            anchors.centerIn: parent
+            width: parent.width * 0.42
+            height: parent.height * 0.32
+            radius: 14
+            color: "#D91A1A1A"
+            border.width: 1
+            border.color: "#808080"
+            clip: true
+
+            Column {
+                id: messageDialogContent
+                anchors.fill: parent
+                anchors.margins: messageDialog.height * 0.10
+                spacing: messageDialog.height * 0.08
+
+                Text {
+                    width: messageDialogContent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    color: "white"
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: Math.max(20, messageDialog.height * 0.12)
+                    font.bold: true
+                    text: appController.playerMessage
+                }
+
+                Item {
+                    width: messageDialogContent.width
+                    height: messageDialog.height * 0.05
+                }
+
+                Rectangle {
+                    width: messageDialogContent.width
+                    height: Math.max(56, messageDialog.height * 0.26)
+                    radius: 8
+                    color: "#2AA84A"
+                    border.width: 1
+                    border.color: "#7CF1A3"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "OK"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: Math.max(22, messageDialog.height * 0.12)
+                    }
+                }
+            }
+        }
     }
 
     Rectangle {
@@ -166,6 +220,11 @@ Item {
             if (appController.resumePromptVisible)
                 root.resumeChoiceIndex = 0
         }
+
+        function onPlayerMessageChanged() {
+            root.messageDialogVisible = appController.playerMessage !== ""
+            root.forceActiveFocus()
+        }
     }
 
     Connections {
@@ -189,6 +248,10 @@ Item {
             event.accepted = true
             return
         }
+        if (root.messageDialogVisible) {
+            event.accepted = true
+            return
+        }
         if (root.audioDelayMode) {
             root.adjustAudioDelay(-root.audioDelayStepMs)
             event.accepted = true
@@ -200,6 +263,10 @@ Item {
 
     Keys.onRightPressed: function(event) {
         if (appController.resumePromptVisible) {
+            event.accepted = true
+            return
+        }
+        if (root.messageDialogVisible) {
             event.accepted = true
             return
         }
@@ -227,6 +294,11 @@ Item {
     }
 
     Keys.onReturnPressed: function(event) {
+        if (root.messageDialogVisible) {
+            appController.clearPlayerMessage()
+            event.accepted = true
+            return
+        }
         if (!appController.resumePromptVisible)
             return
         appController.decideResumePlayback(root.resumeChoiceIndex === 0)
@@ -234,6 +306,11 @@ Item {
     }
 
     Keys.onEnterPressed: function(event) {
+        if (root.messageDialogVisible) {
+            appController.clearPlayerMessage()
+            event.accepted = true
+            return
+        }
         if (!appController.resumePromptVisible)
             return
         appController.decideResumePlayback(root.resumeChoiceIndex === 0)
@@ -241,6 +318,14 @@ Item {
     }
 
     Keys.onPressed: function(event) {
+        if (root.messageDialogVisible) {
+            if (event.key === Qt.Key_B || event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                appController.clearPlayerMessage()
+                event.accepted = true
+            }
+            return
+        }
+
         if (appController.resumePromptVisible)
             return
 
@@ -258,6 +343,18 @@ Item {
 
         if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_S) {
             playerController.markSkipBoundary()
+            event.accepted = true
+            return
+        }
+
+        if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_X) {
+            appController.exportCurrentSkipRanges()
+            event.accepted = true
+            return
+        }
+
+        if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_I) {
+            appController.importCurrentSkipRanges()
             event.accepted = true
             return
         }
@@ -286,4 +383,5 @@ Item {
             event.accepted = true
         }
     }
+
 }

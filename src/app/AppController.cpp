@@ -5,10 +5,16 @@
 #include "../player/PlayerController.h"
 #include "../persistence/ResumeRepository.h"
 #include <QCursor>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMetaObject>
+#include <QSaveFile>
+#include <QStandardPaths>
 #include <algorithm>
 #include <cmath>
 
@@ -76,6 +82,11 @@ bool AppController::resumePromptVisible() const
 double AppController::pendingResumePosition() const
 {
     return m_pendingResumePosition;
+}
+
+QString AppController::playerMessage() const
+{
+    return m_playerMessage;
 }
 
 void AppController::startPlayback(double startPosition)
@@ -216,6 +227,127 @@ bool AppController::resetResumeDatabase()
     return true;
 }
 
+bool AppController::exportCurrentSkipRanges()
+{
+    if (m_currentFilePath.isEmpty()) {
+        setPlayerMessage("Kein aktuelles Video aktiv.");
+        return false;
+    }
+
+    const QVector<SkipRange> ranges = m_playerController->skipRangesData();
+    if (ranges.isEmpty()) {
+        setPlayerMessage("Keine Skip-Bereiche zum Exportieren vorhanden.");
+        return false;
+    }
+
+    QString downloadDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    if (downloadDir.isEmpty())
+        downloadDir = QDir::homePath() + "/Downloads";
+
+    QDir().mkpath(downloadDir);
+
+    const QFileInfo fileInfo(m_currentFilePath);
+    const QString exportPath = downloadDir + "/" + fileInfo.completeBaseName() + "_skip.json";
+
+    QJsonArray jsonRanges;
+    for (const SkipRange &range : ranges) {
+        QJsonObject jsonRange;
+        jsonRange.insert("start", range.start);
+        jsonRange.insert("end", range.end);
+        jsonRanges.append(jsonRange);
+    }
+
+    QJsonObject rootObject;
+    rootObject.insert("video_name", fileInfo.completeBaseName());
+    rootObject.insert("source_file", fileInfo.fileName());
+    rootObject.insert("skip_ranges", jsonRanges);
+
+    QSaveFile file(exportPath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        setPlayerMessage("Export fehlgeschlagen.");
+        return false;
+    }
+
+    const QJsonDocument document(rootObject);
+    if (file.write(document.toJson(QJsonDocument::Indented)) < 0) {
+        setPlayerMessage("Export fehlgeschlagen.");
+        return false;
+    }
+
+    if (!file.commit()) {
+        setPlayerMessage("Export fehlgeschlagen.");
+        return false;
+    }
+
+    setPlayerMessage("Skip-Bereiche exportiert nach Downloads.");
+    return true;
+}
+
+bool AppController::importCurrentSkipRanges()
+{
+    if (m_currentFilePath.isEmpty()) {
+        setPlayerMessage("Kein aktuelles Video aktiv.");
+        return false;
+    }
+
+    QString downloadDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    if (downloadDir.isEmpty())
+        downloadDir = QDir::homePath() + "/Downloads";
+
+    const QFileInfo fileInfo(m_currentFilePath);
+    const QString importPath = downloadDir + "/" + fileInfo.completeBaseName() + "_skip.json";
+    QFile file(importPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        setPlayerMessage("Keine passende Skip-Datei in Downloads gefunden.");
+        return false;
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    if (!document.isObject()) {
+        setPlayerMessage("Skip-Datei ist ungueltig.");
+        return false;
+    }
+
+    const QJsonValue rangesValue = document.object().value("skip_ranges");
+    if (!rangesValue.isArray()) {
+        setPlayerMessage("Skip-Datei ist ungueltig.");
+        return false;
+    }
+
+    QVector<SkipRange> ranges;
+    const QJsonArray jsonRanges = rangesValue.toArray();
+    ranges.reserve(jsonRanges.size());
+
+    for (const QJsonValue &value : jsonRanges) {
+        if (!value.isObject())
+            continue;
+
+        const QJsonObject rangeObject = value.toObject();
+        const QJsonValue startValue = rangeObject.value("start");
+        const QJsonValue endValue = rangeObject.value("end");
+        if (!startValue.isDouble() || !endValue.isDouble())
+            continue;
+
+        ranges.append({ startValue.toDouble(), endValue.toDouble() });
+    }
+
+    m_playerController->clearPendingSkipRange();
+    m_playerController->setSkipRanges(ranges);
+    if (!m_resumeRepository->saveSkipRanges(
+        m_currentFilePath,
+        m_playerController->skipRangesData())) {
+        setPlayerMessage("Import fehlgeschlagen.");
+        return false;
+    }
+
+    return true;
+}
+
+void AppController::clearPlayerMessage()
+{
+    setPlayerMessage(QString());
+}
+
 void AppController::decideResumePlayback(bool continueFromSavedPosition)
 {
     if (!m_resumePromptVisible)
@@ -268,6 +400,7 @@ void AppController::closePlayer(bool saveResumePosition)
         m_currentVideoName.clear();
         emit currentVideoNameChanged();
     }
+    setPlayerMessage(QString());
 }
 
 void AppController::handlePlaybackFinished()
@@ -291,4 +424,13 @@ void AppController::setCurrentIndex(int index)
         return;
     m_currentIndex = index;
     emit currentIndexChanged();
+}
+
+void AppController::setPlayerMessage(const QString &message)
+{
+    if (m_playerMessage == message)
+        return;
+
+    m_playerMessage = message;
+    emit playerMessageChanged();
 }

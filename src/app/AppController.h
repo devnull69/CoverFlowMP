@@ -16,6 +16,7 @@ class AppController : public QObject
     Q_PROPERTY(QString currentVideoName READ currentVideoName NOTIFY currentVideoNameChanged)
     Q_PROPERTY(bool resumePromptVisible READ resumePromptVisible NOTIFY resumePromptVisibleChanged)
     Q_PROPERTY(double pendingResumePosition READ pendingResumePosition NOTIFY pendingResumePositionChanged)
+    Q_PROPERTY(QString playerMessage READ playerMessage NOTIFY playerMessageChanged)
 
 public:
     explicit AppController(VideoLibraryModel *libraryModel,
@@ -29,6 +30,7 @@ public:
     QString currentVideoName() const;
     bool resumePromptVisible() const;
     double pendingResumePosition() const;
+    QString playerMessage() const;
 
     Q_INVOKABLE void initialize(const QString &videoFolder);
     Q_INVOKABLE void playSelected(int index);
@@ -36,6 +38,9 @@ public:
     Q_INVOKABLE bool canDeleteCurrentVideo() const;
     Q_INVOKABLE bool deleteCurrentVideo();
     Q_INVOKABLE bool resetResumeDatabase();
+    Q_INVOKABLE bool exportCurrentSkipRanges();
+    Q_INVOKABLE bool importCurrentSkipRanges();
+    Q_INVOKABLE void clearPlayerMessage();
     Q_INVOKABLE void backToBrowser();
     Q_INVOKABLE void setCurrentIndex(int index);
 
@@ -45,10 +50,12 @@ signals:
     void currentVideoNameChanged();
     void resumePromptVisibleChanged();
     void pendingResumePositionChanged();
+    void playerMessageChanged();
 
 private:
     void closePlayer(bool saveResumePosition);
     void handlePlaybackFinished();
+    void setPlayerMessage(const QString &message);
     void setPlayerCursorHidden(bool hidden);
     void startPlayback(double startPosition);
 
@@ -65,6 +72,7 @@ private:
     QString m_videoFolder;
     QString m_currentFilePath;
     QString m_currentVideoName;
+    QString m_playerMessage;
     double m_pendingResumePosition = 0.0;
     double m_currentAudioDelay = 0.0;
 };
