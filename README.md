@@ -1,6 +1,6 @@
 # CoverFlowMP
 
-CoverFlowMP ist ein videobasiertes Medien-Center mit einfacher Tastatursteuerung. Die Bedienung ist in wenige klare Modi aufgeteilt:
+CoverFlowMP ist ein videobasiertes Medien-Center fuer Linux-Systeme mit einfacher Tastatursteuerung. Die Bedienung ist in wenige klare Modi aufgeteilt:
 
 - `Browser-Modus`: Ordner und Videos durchblättern
 - `Play-Modus`: Video läuft
