@@ -290,15 +290,21 @@ bool AppController::importCurrentSkipRanges()
         return false;
     }
 
+    const QFileInfo fileInfo(m_currentFilePath);
+    const QString importFileName = fileInfo.completeBaseName() + "_skip.json";
+
+    const QString videoDir = fileInfo.absolutePath();
     QString downloadDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
     if (downloadDir.isEmpty())
         downloadDir = QDir::homePath() + "/Downloads";
 
-    const QFileInfo fileInfo(m_currentFilePath);
-    const QString importPath = downloadDir + "/" + fileInfo.completeBaseName() + "_skip.json";
+    QString importPath = videoDir + "/" + importFileName;
+    if (!QFileInfo::exists(importPath))
+        importPath = downloadDir + "/" + importFileName;
+
     QFile file(importPath);
     if (!file.open(QIODevice::ReadOnly)) {
-        setPlayerMessage("Keine passende Skip-Datei in Downloads gefunden.");
+        setPlayerMessage("Keine passende Skip-Datei im Video-Ordner oder in Downloads gefunden.");
         return false;
     }
 
