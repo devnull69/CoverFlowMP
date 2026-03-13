@@ -242,11 +242,22 @@ bool AppController::deleteCurrentVideo()
     if (item.filePath.isEmpty() || item.isFolder)
         return false;
 
+    const QFileInfo fileInfo(item.filePath);
+    const QString basePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName();
+    const QString coverPath = basePath + ".jpg";
+    const QString skipFilePath = basePath + "_skip.json";
+
     m_resumeRepository->deletePosition(item.filePath);
     m_resumeRepository->deleteSkipRanges(item.filePath);
 
     if (!QFile::remove(item.filePath))
         return false;
+
+    if (QFileInfo::exists(coverPath))
+        QFile::remove(coverPath);
+
+    if (QFileInfo::exists(skipFilePath))
+        QFile::remove(skipFilePath);
 
     const int previousIndex = m_currentIndex;
     initialize(m_videoFolder);
