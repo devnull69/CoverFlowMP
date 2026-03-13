@@ -6,6 +6,48 @@ CoverFlowMP ist ein videobasiertes Medien-Center mit einfacher Tastatursteuerung
 - `Play-Modus`: Video läuft
 - `Pause-Modus`: Video steht, zusätzliche Feinnavigation und Bearbeitung sind möglich
 
+## Starten
+
+Das Programm kann optional mit einem Root-Video-Ordner gestartet werden:
+
+```bash
+CoverFlowMPApp /pfad/zum/video-root
+```
+
+Wenn kein Parameter angegeben wird, verwendet CoverFlowMP immer `~/Videos`.
+
+## Dateien finden
+
+Für ein Video `MeinFilm.mp4` werden zusätzliche Dateien im gleichen Ordner am schnellsten gefunden:
+
+- Cover-Datei: `MeinFilm.jpg`
+- Skip-Datei: `MeinFilm_skip.json`
+
+Für Ordner kann ein eigenes Ordner-Cover hinterlegt werden:
+
+- Ordner-Cover: `folder.jpg` innerhalb des jeweiligen Ordners
+
+Skip-Dateien werden bei Bedarf zusätzlich auch in `~/Downloads` gesucht.
+
+Beispiel für eine `*_skip.json` Datei:
+
+```json
+{
+  "video_name": "MeinFilm",
+  "source_file": "MeinFilm.mp4",
+  "skip_ranges": [
+    {
+      "start": 12.5,
+      "end": 48.0
+    },
+    {
+      "start": 305.2,
+      "end": 331.7
+    }
+  ]
+}
+```
+
 ## Browser-Modus
 
 Im Browser-Modus bewegst du dich durch Ordner und Videos im CoverFlow.
@@ -27,15 +69,6 @@ Im Browser-Modus bewegst du dich durch Ordner und Videos im CoverFlow.
 - `0`: Ausgewähltes Video löschen, nach Sicherheitsabfrage
 - `F`: Fast-Modus umschalten
 - `R`: Resume- und Skip-Datenbank komplett zurücksetzen, nach Sicherheitsabfrage
-
-### Dialoge im Browser
-
-Für Lösch- und Rücksetzdialoge gilt:
-
-- `Hoch` / `Runter`: Zwischen `JA` und `NEIN` wechseln
-- `Enter`: Auswahl bestätigen
-- `Esc`: Dialog schließen
-- `B`: Dialog schließen
 
 Hinweis zur Löschfunktion:
 
@@ -97,10 +130,8 @@ Skip-Bereiche stehen nur im Normalmodus zur Verfügung. Im Fast-Modus sind sie d
 ### Audio-Verzögerung anpassen
 
 - `A`: Audio-Delay-Modus öffnen
-- Im Audio-Delay-Modus:
-  `Links`: 50 ms früher
-  `Rechts`: 50 ms später
-  `Esc`: Audio-Delay-Modus verlassen
+- Im Audio-Delay-Modus bewirken `Links` und `Rechts` jeweils `50 ms` früher bzw. später
+- `Esc`: Audio-Delay-Modus verlassen
 
 ## Resume-Dialog
 
@@ -109,16 +140,26 @@ Wenn es zu einem Video eine gespeicherte Wiedergabeposition gibt, erscheint beim
 - `Hoch` / `Runter`: Zwischen `Weiter` und `Von vorne` wählen
 - `Enter`: Auswahl bestätigen
 
-## Meldungs- und Sicherheitsdialoge im Player
+## Dialogbedienung
 
-Für Hinweise und Sicherheitsabfragen im Player gilt:
+Die Dialogsteuerung ist im Browser und im Player grundsätzlich gleich:
 
 - `Hoch` / `Runter`: Zwischen `JA` und `NEIN` wechseln, falls Auswahl vorhanden
 - `Enter`: Auswahl bestätigen
 - `Esc`: Dialog schließen, wenn erlaubt
 - `B`: Dialog schließen, wenn erlaubt
 
-Beim Dialog zum Löschen von Skip-Bereichen ist `NEIN` standardmäßig vorausgewählt.
+Das gilt unter anderem für:
+
+- Löschdialog im Browser
+- Rücksetzdialog im Browser
+- Dialog zum Löschen aller Skip-Bereiche eines Videos im Pause-Modus
+- Meldungsdialoge im Player
+
+Besonderheiten:
+
+- Beim Dialog zum Löschen von Skip-Bereichen ist `NEIN` standardmäßig vorausgewählt.
+- Der Resume-Dialog verwendet nur `Hoch`, `Runter` und `Enter`.
 
 ## Fast-Modus
 
@@ -127,4 +168,3 @@ Der Fast-Modus ist für schnelles Anschauen gedacht.
 - Skip-Bereiche werden nicht automatisch angewendet
 - Das Setzen neuer Skip-Bereiche ist deaktiviert
 - Bereits gespeicherte Skip-Bereiche bleiben erhalten und können später im Normalmodus wieder genutzt werden
-
