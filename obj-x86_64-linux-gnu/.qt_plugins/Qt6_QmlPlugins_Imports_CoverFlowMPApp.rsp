@@ -1,9 +1,0 @@
--rootPath
-/home/devnull69/Projects/CoverFlowMP
--cmake-output
--output-file
-/home/devnull69/Projects/CoverFlowMP/obj-x86_64-linux-gnu/.qt_plugins/Qt6_QmlPlugins_Imports_CoverFlowMPApp.cmake
--importPath
-/home/devnull69/Projects/CoverFlowMP/obj-x86_64-linux-gnu
--importPath
-/usr/lib/x86_64-linux-gnu/qt6/qml
