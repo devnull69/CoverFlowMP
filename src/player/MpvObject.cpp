@@ -207,6 +207,9 @@ void MpvObject::togglePause()
         return;
 
     m_paused = !m_paused;
+    if (!m_paused)
+        m_preserveLastFrameOnEnd = false;
+
     int pausedFlag = m_paused ? 1 : 0;
     mpv_set_property(m_mpv, "pause", MPV_FORMAT_FLAG, &pausedFlag);
     emit pausedChanged(m_paused);
@@ -232,6 +235,8 @@ void MpvObject::seekRelative(double seconds)
     if (!m_mpv)
         return;
 
+    m_preserveLastFrameOnEnd = false;
+
     double target = m_position + seconds;
     if (target < 0.0)
         target = 0.0;
@@ -253,6 +258,8 @@ void MpvObject::seekAbsolute(double seconds)
 {
     if (!m_mpv)
         return;
+
+    m_preserveLastFrameOnEnd = false;
 
     double target = qMax(0.0, seconds);
     if (m_duration > 0.0 && target > m_duration)
@@ -310,6 +317,8 @@ void MpvObject::frameBackStep()
 {
     if (!m_mpv)
         return;
+
+    m_preserveLastFrameOnEnd = false;
 
     const char *stepArgs[] = { "frame-back-step", nullptr };
     mpv_command(m_mpv, stepArgs);
