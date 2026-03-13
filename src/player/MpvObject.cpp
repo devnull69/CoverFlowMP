@@ -269,6 +269,33 @@ void MpvObject::seekAbsolute(double seconds)
     }
 }
 
+void MpvObject::jumpToLastFrame()
+{
+    if (!m_mpv || m_duration <= 0.0)
+        return;
+
+    // Seek very close to the end and advance one frame with keep-open semantics,
+    // so mpv stops on the last visible frame instead of finishing playback.
+    const double seekTarget = qMax(0.0, m_duration - 0.1);
+    m_preserveLastFrameOnEnd = true;
+
+    const QByteArray seekPos = QByteArray::number(seekTarget, 'f', 3);
+    const char *seekArgs[] = { "seek", seekPos.constData(), "absolute+exact", nullptr };
+    if (mpv_command(m_mpv, seekArgs) < 0) {
+        m_preserveLastFrameOnEnd = false;
+        return;
+    }
+
+    if (!qFuzzyCompare(m_position + 1.0, seekTarget + 1.0)) {
+        m_position = seekTarget;
+        emit positionChanged(m_position);
+    }
+
+    const char *stepArgs[] = { "frame-step", nullptr };
+    if (mpv_command(m_mpv, stepArgs) < 0)
+        m_preserveLastFrameOnEnd = false;
+}
+
 void MpvObject::frameStep()
 {
     if (!m_mpv)

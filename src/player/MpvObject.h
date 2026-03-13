@@ -18,6 +18,7 @@ public:
     void togglePause();
     void seekRelative(double seconds);
     void seekAbsolute(double seconds);
+    void jumpToLastFrame();
     void frameStep();
     void frameBackStep();
     void stop();

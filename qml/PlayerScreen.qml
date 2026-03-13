@@ -36,6 +36,13 @@ Item {
         playerController.setAudioDelay(nextMs / 1000.0)
     }
 
+    function seekBy(seconds) {
+        if (playerController.paused)
+            playerController.seekRelativeClamped(seconds)
+        else
+            playerController.seekRelative(seconds)
+    }
+
     Component.onCompleted: {
         Window.window.visibility = Window.FullScreen
         forceActiveFocus()
@@ -257,7 +264,7 @@ Item {
             event.accepted = true
             return
         }
-        playerController.seekRelative(-10.0)
+        root.seekBy((event.modifiers & Qt.ShiftModifier) ? -5.0 : -10.0)
         event.accepted = true
     }
 
@@ -275,21 +282,43 @@ Item {
             event.accepted = true
             return
         }
-        playerController.seekRelative(10.0)
+        root.seekBy((event.modifiers & Qt.ShiftModifier) ? 5.0 : 10.0)
         event.accepted = true
     }
 
     Keys.onUpPressed: function(event) {
-        if (!appController.resumePromptVisible)
+        if (appController.resumePromptVisible) {
+            root.resumeChoiceIndex = 0
+            event.accepted = true
             return
-        root.resumeChoiceIndex = 0
+        }
+        if (root.messageDialogVisible) {
+            event.accepted = true
+            return
+        }
+        if (root.audioDelayMode) {
+            event.accepted = true
+            return
+        }
+        root.seekBy(60.0)
         event.accepted = true
     }
 
     Keys.onDownPressed: function(event) {
-        if (!appController.resumePromptVisible)
+        if (appController.resumePromptVisible) {
+            root.resumeChoiceIndex = 1
+            event.accepted = true
             return
-        root.resumeChoiceIndex = 1
+        }
+        if (root.messageDialogVisible) {
+            event.accepted = true
+            return
+        }
+        if (root.audioDelayMode) {
+            event.accepted = true
+            return
+        }
+        root.seekBy(-60.0)
         event.accepted = true
     }
 
@@ -337,6 +366,12 @@ Item {
 
         if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_Minus) {
             playerController.stepFrameBackward()
+            event.accepted = true
+            return
+        }
+
+        if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_E) {
+            playerController.jumpToLastFrame()
             event.accepted = true
             return
         }

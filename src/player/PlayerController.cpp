@@ -108,6 +108,16 @@ void PlayerController::togglePause()
 
 void PlayerController::seekRelative(double seconds)
 {
+    seekRelativeInternal(seconds, true);
+}
+
+void PlayerController::seekRelativeClamped(double seconds)
+{
+    seekRelativeInternal(seconds, false);
+}
+
+void PlayerController::seekRelativeInternal(double seconds, bool finishAtEnd)
+{
     if (!m_mpv)
         return;
 
@@ -127,6 +137,10 @@ void PlayerController::seekRelative(double seconds)
     } else {
         target = resolveSeekTarget(target, direction);
     }
+
+    if (!finishAtEnd && m_duration > 0.0 && target >= m_duration)
+        target = qMax(0.0, m_duration - 0.001);
+
     if (m_duration > 0.0 && target >= m_duration) {
         requestPlaybackFinished();
         return;
@@ -150,6 +164,14 @@ void PlayerController::stepFrameBackward()
         return;
 
     m_mpv->frameBackStep();
+}
+
+void PlayerController::jumpToLastFrame()
+{
+    if (!m_paused)
+        return;
+
+    m_mpv->jumpToLastFrame();
 }
 
 void PlayerController::markSkipBoundary()

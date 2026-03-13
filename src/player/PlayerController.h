@@ -37,8 +37,10 @@ public:
     Q_INVOKABLE void playFile(const QString &filePath, double startPosition = 0.0, double audioDelay = 0.0);
     Q_INVOKABLE void togglePause();
     Q_INVOKABLE void seekRelative(double seconds);
+    Q_INVOKABLE void seekRelativeClamped(double seconds);
     Q_INVOKABLE void stepFrameForward();
     Q_INVOKABLE void stepFrameBackward();
+    Q_INVOKABLE void jumpToLastFrame();
     Q_INVOKABLE void markSkipBoundary();
     Q_INVOKABLE void clearPendingSkipRange();
     Q_INVOKABLE void stop();
@@ -68,6 +70,7 @@ private:
     void emitSkipRangeState();
     void finalizeSkipRange(double position);
     void requestPlaybackFinished();
+    void seekRelativeInternal(double seconds, bool finishAtEnd);
     QVector<SkipRange> normalizedSkipRanges(const QVector<SkipRange> &ranges) const;
     double resolveSeekTarget(double target, SeekDirection direction) const;
 
