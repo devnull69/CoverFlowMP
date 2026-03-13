@@ -1,6 +1,7 @@
-coverflowmp (1.0.1) UNRELEASED; urgency=medium
+coverflowmp (1.0.2) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
+  * Added time delay functionality
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Thu, 12 Mar 2026 15:51:23 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Thu, 12 Mar 2026 23:52:27 +0100

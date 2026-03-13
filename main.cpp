@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QCommandLineParser>
 #include <QIcon>
+#include <QFileInfoList>
 #include <clocale>
 #include <QtGlobal>
 
@@ -43,10 +44,20 @@ int main(int argc, char *argv[])
     parser.addPositionalArgument("video_root", "Optionaler Root-Ordner fuer die Videobibliothek.");
     parser.process(app);
 
-    QString videoFolder = QDir::homePath() + "/Videos";
+    const QString defaultVideoFolder = QDir::homePath() + "/Videos";
+    QString videoFolder = defaultVideoFolder;
     const QStringList positionalArgs = parser.positionalArguments();
     if (!positionalArgs.isEmpty()) {
         videoFolder = QDir(positionalArgs.first()).absolutePath();
+
+        const QDir candidateDir(videoFolder);
+        const QFileInfoList candidateFiles = candidateDir.entryInfoList(
+            QDir::Files | QDir::NoDotAndDotDot,
+            QDir::Name
+        );
+
+        if (!candidateDir.exists() || candidateFiles.isEmpty())
+            videoFolder = defaultVideoFolder;
     }
 
     appController.initialize(videoFolder);

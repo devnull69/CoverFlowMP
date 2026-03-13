@@ -142,7 +142,7 @@ Item {
                             Image {
                                 id: coverImage
                                 anchors.fill: parent
-                                fillMode: Image.PreserveAspectCrop
+                                fillMode: Image.Stretch
                                 source: coverPath !== "" ? "file://" + coverPath : ""
                                 visible: false
                                 smooth: true

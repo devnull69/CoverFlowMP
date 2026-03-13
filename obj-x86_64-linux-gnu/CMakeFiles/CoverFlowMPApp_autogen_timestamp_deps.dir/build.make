@@ -69,11 +69,11 @@ include CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps.dir/compiler_depend.mak
 # Include the progress variables for this target.
 include CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps.dir/progress.make
 
+CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Sql.so.6.4.2
 CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps: /usr/lib/qt6/libexec/moc
 CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Gui.so.6.4.2
-CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Qml.so.6.4.2
-CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Sql.so.6.4.2
 CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Quick.so.6.4.2
+CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps: /usr/lib/x86_64-linux-gnu/libQt6Qml.so.6.4.2
 
 CoverFlowMPApp_autogen_timestamp_deps: CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps
 CoverFlowMPApp_autogen_timestamp_deps: CMakeFiles/CoverFlowMPApp_autogen_timestamp_deps.dir/build.make
