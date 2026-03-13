@@ -9,6 +9,8 @@ Item {
     property int resumeChoiceIndex: 0
     property bool messageDialogVisible: false
     property bool audioDelayMode: false
+    property bool clearSkipDialogVisible: false
+    property int clearSkipChoiceIndex: 1 // 0 = JA, 1 = NEIN
     readonly property int audioDelayStepMs: 50
     readonly property int audioDelayMaxMs: 2000
 
@@ -54,6 +56,7 @@ Item {
             forceActiveFocus()
         } else {
             audioDelayMode = false
+            clearSkipDialogVisible = false
         }
     }
 
@@ -146,6 +149,74 @@ Item {
                         color: "white"
                         font.bold: true
                         font.pixelSize: Math.max(22, messageDialog.height * 0.12)
+                    }
+                }
+            }
+        }
+        Rectangle {
+            id: clearSkipDialog
+            visible: root.clearSkipDialogVisible
+            anchors.centerIn: parent
+            width: parent.width * 0.42
+            height: parent.height * 0.40
+            radius: 14
+            color: "#D91A1A1A"
+            border.width: 1
+            border.color: "#808080"
+            clip: true
+
+            Column {
+                id: clearSkipDialogContent
+                anchors.fill: parent
+                anchors.margins: clearSkipDialog.height * 0.08
+                spacing: clearSkipDialog.height * 0.06
+
+                Text {
+                    width: clearSkipDialogContent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    color: "white"
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: Math.max(20, clearSkipDialog.height * 0.09)
+                    font.bold: true
+                    text: "Skip-Bereiche dieses Videos loeschen?"
+                }
+
+                Item {
+                    width: clearSkipDialogContent.width
+                    height: clearSkipDialog.height * 0.03
+                }
+
+                Rectangle {
+                    width: clearSkipDialogContent.width
+                    height: Math.max(56, clearSkipDialog.height * 0.20)
+                    radius: 8
+                    color: root.clearSkipChoiceIndex === 0 ? "#2AA84A" : "#303030"
+                    border.width: 1
+                    border.color: root.clearSkipChoiceIndex === 0 ? "#7CF1A3" : "#666666"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "JA"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: Math.max(22, clearSkipDialog.height * 0.10)
+                    }
+                }
+
+                Rectangle {
+                    width: clearSkipDialogContent.width
+                    height: Math.max(56, clearSkipDialog.height * 0.20)
+                    radius: 8
+                    color: root.clearSkipChoiceIndex === 1 ? "#2AA84A" : "#303030"
+                    border.width: 1
+                    border.color: root.clearSkipChoiceIndex === 1 ? "#7CF1A3" : "#666666"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "NEIN"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: Math.max(22, clearSkipDialog.height * 0.09)
                     }
                 }
             }
@@ -255,6 +326,10 @@ Item {
             event.accepted = true
             return
         }
+        if (root.clearSkipDialogVisible) {
+            event.accepted = true
+            return
+        }
         if (root.messageDialogVisible) {
             event.accepted = true
             return
@@ -270,6 +345,10 @@ Item {
 
     Keys.onRightPressed: function(event) {
         if (appController.resumePromptVisible) {
+            event.accepted = true
+            return
+        }
+        if (root.clearSkipDialogVisible) {
             event.accepted = true
             return
         }
@@ -292,6 +371,11 @@ Item {
             event.accepted = true
             return
         }
+        if (root.clearSkipDialogVisible) {
+            root.clearSkipChoiceIndex = 0
+            event.accepted = true
+            return
+        }
         if (root.messageDialogVisible) {
             event.accepted = true
             return
@@ -307,6 +391,11 @@ Item {
     Keys.onDownPressed: function(event) {
         if (appController.resumePromptVisible) {
             root.resumeChoiceIndex = 1
+            event.accepted = true
+            return
+        }
+        if (root.clearSkipDialogVisible) {
+            root.clearSkipChoiceIndex = 1
             event.accepted = true
             return
         }
@@ -328,6 +417,13 @@ Item {
             event.accepted = true
             return
         }
+        if (root.clearSkipDialogVisible) {
+            if (root.clearSkipChoiceIndex === 0)
+                appController.clearCurrentSkipRanges()
+            root.clearSkipDialogVisible = false
+            event.accepted = true
+            return
+        }
         if (!appController.resumePromptVisible)
             return
         appController.decideResumePlayback(root.resumeChoiceIndex === 0)
@@ -337,6 +433,13 @@ Item {
     Keys.onEnterPressed: function(event) {
         if (root.messageDialogVisible) {
             appController.clearPlayerMessage()
+            event.accepted = true
+            return
+        }
+        if (root.clearSkipDialogVisible) {
+            if (root.clearSkipChoiceIndex === 0)
+                appController.clearCurrentSkipRanges()
+            root.clearSkipDialogVisible = false
             event.accepted = true
             return
         }
@@ -350,6 +453,14 @@ Item {
         if (root.messageDialogVisible) {
             if (event.key === Qt.Key_B || event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 appController.clearPlayerMessage()
+                event.accepted = true
+            }
+            return
+        }
+
+        if (root.clearSkipDialogVisible) {
+            if (event.key === Qt.Key_Escape || event.key === Qt.Key_B) {
+                root.clearSkipDialogVisible = false
                 event.accepted = true
             }
             return
@@ -395,8 +506,16 @@ Item {
         }
 
         if (playerController.paused && !root.audioDelayMode && !appController.fastMode
-                && (event.key === Qt.Key_C || event.key === Qt.Key_Backspace)) {
+                && event.key === Qt.Key_C) {
             playerController.clearPendingSkipRange()
+            event.accepted = true
+            return
+        }
+
+        if (playerController.paused && !root.audioDelayMode
+                && (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace)) {
+            root.clearSkipChoiceIndex = 1
+            root.clearSkipDialogVisible = true
             event.accepted = true
             return
         }

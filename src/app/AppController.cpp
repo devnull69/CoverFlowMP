@@ -404,6 +404,24 @@ bool AppController::importCurrentSkipRanges()
     return true;
 }
 
+bool AppController::clearCurrentSkipRanges()
+{
+    if (m_currentFilePath.isEmpty()) {
+        setPlayerMessage("Kein aktuelles Video aktiv.");
+        return false;
+    }
+
+    m_playerController->clearPendingSkipRange();
+    m_playerController->setSkipRanges({});
+
+    if (!m_resumeRepository->deleteSkipRanges(m_currentFilePath)) {
+        setPlayerMessage("Skip-Bereiche konnten nicht geloescht werden.");
+        return false;
+    }
+
+    return true;
+}
+
 void AppController::clearPlayerMessage()
 {
     setPlayerMessage(QString());

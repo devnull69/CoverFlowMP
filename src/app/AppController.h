@@ -48,6 +48,7 @@ public:
     Q_INVOKABLE bool resetResumeDatabase();
     Q_INVOKABLE bool exportCurrentSkipRanges();
     Q_INVOKABLE bool importCurrentSkipRanges();
+    Q_INVOKABLE bool clearCurrentSkipRanges();
     Q_INVOKABLE void clearPlayerMessage();
     Q_INVOKABLE void toggleFastMode();
     Q_INVOKABLE void backToBrowser();
