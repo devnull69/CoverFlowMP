@@ -7,6 +7,7 @@
 #include "../persistence/ResumeRepository.h"
 #include <QFutureWatcher>
 #include <QCursor>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -98,6 +99,14 @@ QString AppController::playerMessage() const
 bool AppController::fastMode() const
 {
     return m_fastMode;
+}
+
+bool AppController::canNavigateUp() const
+{
+    if (!m_libraryModel || m_libraryModel->rowCount() <= 0)
+        return false;
+
+    return m_libraryModel->itemAt(0).isParentFolder;
 }
 
 void AppController::startPlayback(double startPosition)
@@ -491,6 +500,20 @@ void AppController::setCurrentIndex(int index)
         return;
     m_currentIndex = index;
     emit currentIndexChanged();
+}
+
+void AppController::navigateUpOrQuit()
+{
+    if (canNavigateUp()) {
+        initialize(m_libraryModel->itemAt(0).filePath);
+        if (m_currentIndex != 0) {
+            m_currentIndex = 0;
+            emit currentIndexChanged();
+        }
+        return;
+    }
+
+    QCoreApplication::quit();
 }
 
 void AppController::setPlayerMessage(const QString &message)

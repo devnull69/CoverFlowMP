@@ -22,6 +22,7 @@ class AppController : public QObject
     Q_PROPERTY(double pendingResumePosition READ pendingResumePosition NOTIFY pendingResumePositionChanged)
     Q_PROPERTY(QString playerMessage READ playerMessage NOTIFY playerMessageChanged)
     Q_PROPERTY(bool fastMode READ fastMode NOTIFY fastModeChanged)
+    Q_PROPERTY(bool canNavigateUp READ canNavigateUp NOTIFY currentIndexChanged)
 
 public:
     explicit AppController(VideoLibraryModel *libraryModel,
@@ -37,6 +38,7 @@ public:
     double pendingResumePosition() const;
     QString playerMessage() const;
     bool fastMode() const;
+    bool canNavigateUp() const;
 
     Q_INVOKABLE void initialize(const QString &videoFolder);
     Q_INVOKABLE void playSelected(int index);
@@ -50,6 +52,7 @@ public:
     Q_INVOKABLE void toggleFastMode();
     Q_INVOKABLE void backToBrowser();
     Q_INVOKABLE void setCurrentIndex(int index);
+    Q_INVOKABLE void navigateUpOrQuit();
 
 signals:
     void playerVisibleChanged();

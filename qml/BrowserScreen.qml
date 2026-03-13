@@ -15,7 +15,19 @@ Item {
         forceActiveFocus()
     }
 
-    Keys.onEscapePressed: Qt.quit()
+    Keys.onEscapePressed: function(event) {
+        if (root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) {
+            root.deleteDialogVisible = false
+            root.resetDialogVisible = false
+            root.messageDialogVisible = false
+            appController.clearPlayerMessage()
+            event.accepted = true
+            return
+        }
+
+        appController.navigateUpOrQuit()
+        event.accepted = true
+    }
 
     Keys.onLeftPressed: function(event) {
         if (root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) {

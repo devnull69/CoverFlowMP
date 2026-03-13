@@ -16,14 +16,6 @@ ApplicationWindow {
         fillMode: Image.PreserveAspectCrop
     }
 
-    Item {
-        id: keyCatcher
-        anchors.fill: parent
-        focus: true
-
-        Keys.onEscapePressed: Qt.quit()
-    }
-
     Loader {
         anchors.fill: parent
         source: appController.playerVisible
