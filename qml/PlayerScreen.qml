@@ -49,6 +49,15 @@ Item {
         }
     }
 
+    Connections {
+        target: root.Window.window
+
+        function onActiveChanged() {
+            if (root.Window.window && root.Window.window.active)
+                root.forceActiveFocus()
+        }
+    }
+
     Rectangle {
         anchors.fill: parent
         color: "black"
@@ -56,9 +65,12 @@ Item {
 
     Window {
         id: pauseOverlayWindow
-        visible: root.visible && playerController.paused
+        visible: root.visible
+                 && playerController.paused
+                 && root.Window.window
+                 && root.Window.window.active
         transientParent: root.Window.window
-        flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+        flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
         color: "transparent"
 
         x: root.Window.window ? root.Window.window.x : 0

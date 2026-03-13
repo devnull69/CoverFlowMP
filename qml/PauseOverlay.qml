@@ -156,15 +156,6 @@ Item {
                 }
 
                 Text {
-                    visible: !root.audioDelayMode && !root.skipRangePending
-                    text: "S=Skip setzen   +/-=Frame vor/zurueck"
-                    color: "#D0D0D0"
-                    horizontalAlignment: Text.AlignHCenter
-                    width: contentColumn.width
-                    font.pixelSize: Math.max(18, contentColumn.parent.height * 0.18)
-                }
-
-                Text {
                     text: videoName
                     color: "white"
                     horizontalAlignment: Text.AlignHCenter
