@@ -2,11 +2,15 @@
 
 #include <QObject>
 #include <QString>
+#include <QThreadPool>
+#include <QVector>
+#include "../media/VideoItem.h"
 
 class VideoLibraryModel;
 class LibraryScanner;
 class PlayerController;
 class ResumeRepository;
+class ThumbnailService;
 
 class AppController : public QObject
 {
@@ -62,11 +66,13 @@ private:
     void setPlayerMessage(const QString &message);
     void setPlayerCursorHidden(bool hidden);
     void startPlayback(double startPosition);
+    void queueMissingThumbnails(const QVector<VideoItem> &items, quint64 generation);
 
     VideoLibraryModel *m_libraryModel;
     LibraryScanner *m_scanner;
     PlayerController *m_playerController;
     ResumeRepository *m_resumeRepository;
+    ThumbnailService *m_thumbnailService;
 
     bool m_playerVisible = false;
     bool m_playerCursorHidden = false;
@@ -80,4 +86,6 @@ private:
     bool m_fastMode = false;
     double m_pendingResumePosition = 0.0;
     double m_currentAudioDelay = 0.0;
+    quint64 m_thumbnailGeneration = 0;
+    QThreadPool m_thumbnailThreadPool;
 };

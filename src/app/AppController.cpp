@@ -2,8 +2,10 @@
 
 #include "../media/VideoLibraryModel.h"
 #include "../media/LibraryScanner.h"
+#include "../media/ThumbnailService.h"
 #include "../player/PlayerController.h"
 #include "../persistence/ResumeRepository.h"
+#include <QFutureWatcher>
 #include <QCursor>
 #include <QDir>
 #include <QFile>
@@ -15,6 +17,7 @@
 #include <QMetaObject>
 #include <QSaveFile>
 #include <QStandardPaths>
+#include <QtConcurrentRun>
 #include <algorithm>
 #include <cmath>
 
@@ -27,8 +30,11 @@ AppController::AppController(VideoLibraryModel *libraryModel,
     m_libraryModel(libraryModel),
     m_scanner(scanner),
     m_playerController(playerController),
-    m_resumeRepository(resumeRepository)
+    m_resumeRepository(resumeRepository),
+    m_thumbnailService(scanner ? scanner->thumbnailService() : nullptr)
 {
+    m_thumbnailThreadPool.setMaxThreadCount(2);
+
     connect(m_playerController, &PlayerController::playbackFinished,
             this, &AppController::handlePlaybackFinished,
             Qt::QueuedConnection);
@@ -124,6 +130,7 @@ void AppController::initialize(const QString &videoFolder)
     }
 
     m_videoFolder = videoFolder;
+    const quint64 generation = ++m_thumbnailGeneration;
     auto items = m_scanner->scan(videoFolder);
 
     for (auto &item : items) {
@@ -132,6 +139,7 @@ void AppController::initialize(const QString &videoFolder)
     }
 
     m_libraryModel->setItems(items);
+    queueMissingThumbnails(items, generation);
 
     const int count = m_libraryModel->rowCount();
     const int previousIndex = m_currentIndex;
@@ -142,6 +150,34 @@ void AppController::initialize(const QString &videoFolder)
 
     if (m_currentIndex != previousIndex)
         emit currentIndexChanged();
+}
+
+void AppController::queueMissingThumbnails(const QVector<VideoItem> &items, quint64 generation)
+{
+    if (!m_thumbnailService)
+        return;
+
+    for (const auto &item : items) {
+        if (item.isFolder || item.isDemo || item.filePath.isEmpty() || !item.coverPath.isEmpty())
+            continue;
+
+        auto *watcher = new QFutureWatcher<QString>(this);
+        connect(watcher, &QFutureWatcher<QString>::finished, this, [this, watcher, filePath = item.filePath, generation]() {
+            const QString coverPath = watcher->result();
+            watcher->deleteLater();
+
+            if (generation != m_thumbnailGeneration || coverPath.isEmpty())
+                return;
+
+            m_libraryModel->updateCoverPath(filePath, coverPath);
+        });
+
+        watcher->setFuture(QtConcurrent::run(&m_thumbnailThreadPool, [thumbnailService = m_thumbnailService, filePath = item.filePath]() -> QString {
+            if (!thumbnailService)
+                return {};
+            return thumbnailService->ensureThumbnail(filePath);
+        }));
+    }
 }
 
 void AppController::playSelected(int index)

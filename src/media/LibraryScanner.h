@@ -14,6 +14,7 @@ public:
     explicit LibraryScanner(ThumbnailService *thumbnailService, QObject *parent = nullptr);
     void setRootFolder(const QString &rootFolder);
     QVector<VideoItem> scan(const QString &folderPath) const;
+    ThumbnailService *thumbnailService() const;
 
 private:
     bool isVideoFile(const QString &suffix) const;

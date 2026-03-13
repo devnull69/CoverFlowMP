@@ -9,6 +9,7 @@ class ThumbnailService : public QObject
 
 public:
     explicit ThumbnailService(QObject *parent = nullptr);
+    QString existingThumbnail(const QString &videoPath) const;
     QString ensureThumbnail(const QString &videoPath) const;
 
 private:

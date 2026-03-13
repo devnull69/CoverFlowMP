@@ -16,6 +16,11 @@ void LibraryScanner::setRootFolder(const QString &rootFolder)
     m_rootFolder = QDir(rootFolder).absolutePath();
 }
 
+ThumbnailService *LibraryScanner::thumbnailService() const
+{
+    return m_thumbnailService;
+}
+
 bool LibraryScanner::isVideoFile(const QString &suffix) const
 {
     const QString s = suffix.toLower();
@@ -93,7 +98,7 @@ QVector<VideoItem> LibraryScanner::scan(const QString &folderPath) const
         if (QFileInfo::exists(coverPath)) {
             item.coverPath = coverPath;
         } else {
-            item.coverPath = m_thumbnailService->ensureThumbnail(fi.absoluteFilePath());
+            item.coverPath = m_thumbnailService->existingThumbnail(fi.absoluteFilePath());
         }
 
         item.isDemo = false;

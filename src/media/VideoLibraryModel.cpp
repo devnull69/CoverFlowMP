@@ -71,3 +71,18 @@ void VideoLibraryModel::updateResumePosition(const QString &filePath, double pos
         }
     }
 }
+
+void VideoLibraryModel::updateCoverPath(const QString &filePath, const QString &coverPath)
+{
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (m_items[i].filePath == filePath) {
+            if (m_items[i].coverPath == coverPath)
+                return;
+
+            m_items[i].coverPath = coverPath;
+            const QModelIndex idx = index(i);
+            emit dataChanged(idx, idx, { CoverPathRole });
+            return;
+        }
+    }
+}

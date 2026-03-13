@@ -23,24 +23,31 @@ QString ThumbnailService::cacheFilePathFor(const QString &videoPath) const
     return cacheDir + "/" + hash + ".jpg";
 }
 
-QString ThumbnailService::ensureThumbnail(const QString &videoPath) const
+QString ThumbnailService::existingThumbnail(const QString &videoPath) const
 {
     const QString outFile = cacheFilePathFor(videoPath);
+    return QFileInfo::exists(outFile) ? outFile : "";
+}
 
-    if (QFileInfo::exists(outFile))
+QString ThumbnailService::ensureThumbnail(const QString &videoPath) const
+{
+    const QString outFile = existingThumbnail(videoPath);
+    if (!outFile.isEmpty())
         return outFile;
+
+    const QString generatedOutFile = cacheFilePathFor(videoPath);
 
     QProcess proc;
     proc.start("ffmpegthumbnailer", {
                                         "-i", videoPath,
-                                        "-o", outFile,
+                                        "-o", generatedOutFile,
                                         "-s", "512",
                                         "-t", "5%"
                                     });
     proc.waitForFinished(10000);
 
-    if (QFileInfo::exists(outFile))
-        return outFile;
+    if (QFileInfo::exists(generatedOutFile))
+        return generatedOutFile;
 
     QProcess ffmpegProc;
     ffmpegProc.start("ffmpeg", {
@@ -48,12 +55,12 @@ QString ThumbnailService::ensureThumbnail(const QString &videoPath) const
                                    "-ss", "00:00:05",
                                    "-i", videoPath,
                                    "-frames:v", "1",
-                                   outFile
+                                   generatedOutFile
                                });
     ffmpegProc.waitForFinished(10000);
 
-    if (QFileInfo::exists(outFile))
-        return outFile;
+    if (QFileInfo::exists(generatedOutFile))
+        return generatedOutFile;
 
     return "";
 }

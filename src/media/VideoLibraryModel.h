@@ -29,6 +29,7 @@ public:
     void setItems(const QVector<VideoItem> &items);
     VideoItem itemAt(int index) const;
     void updateResumePosition(const QString &filePath, double position);
+    void updateCoverPath(const QString &filePath, const QString &coverPath);
 
 private:
     QVector<VideoItem> m_items;

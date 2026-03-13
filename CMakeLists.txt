@@ -12,6 +12,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS
+    Concurrent
     Core
     Gui
     Quick
@@ -65,6 +66,7 @@ target_link_directories(CoverFlowMPApp PRIVATE
 
 target_link_libraries(CoverFlowMPApp PRIVATE
     Qt6::Core
+    Qt6::Concurrent
     Qt6::Gui
     Qt6::Quick
     Qt6::Qml
