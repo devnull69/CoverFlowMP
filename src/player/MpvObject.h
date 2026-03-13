@@ -17,6 +17,9 @@ public:
     void playFile(const QString &filePath, double startPosition, double audioDelay = 0.0);
     void togglePause();
     void seekRelative(double seconds);
+    void seekAbsolute(double seconds);
+    void frameStep();
+    void frameBackStep();
     void stop();
     void setVideoWindow(uintptr_t wid);
     void setAudioDelay(double seconds);
@@ -46,6 +49,7 @@ private:
     bool m_hasPendingPlayback = false;
     bool m_hasDeferredSeekAfterLoad = false;
     double m_deferredSeekAfterLoad = 0.0;
+    bool m_preserveLastFrameOnEnd = false;
     bool m_paused = false;
     double m_position = 0.0;
     double m_duration = 0.0;

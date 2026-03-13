@@ -42,6 +42,7 @@ qt_add_executable(CoverFlowMPApp
     src/player/MpvObject.cpp
     src/player/PlayerController.h
     src/player/PlayerController.cpp
+    src/player/SkipRange.h
 
     src/persistence/ResumeRepository.h
     src/persistence/ResumeRepository.cpp

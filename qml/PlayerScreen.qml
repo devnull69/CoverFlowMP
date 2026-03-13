@@ -73,6 +73,9 @@ Item {
             videoName: appController.currentVideoName
             audioDelay: playerController.audioDelay
             audioDelayMode: root.audioDelayMode
+            skipRanges: playerController.skipRanges
+            skipRangePending: playerController.skipRangePending
+            pendingSkipStart: playerController.pendingSkipStart
         }
     }
 
@@ -226,6 +229,34 @@ Item {
     }
 
     Keys.onPressed: function(event) {
+        if (appController.resumePromptVisible)
+            return
+
+        if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_Plus) {
+            playerController.stepFrameForward()
+            event.accepted = true
+            return
+        }
+
+        if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_Minus) {
+            playerController.stepFrameBackward()
+            event.accepted = true
+            return
+        }
+
+        if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_S) {
+            playerController.markSkipBoundary()
+            event.accepted = true
+            return
+        }
+
+        if (playerController.paused && !root.audioDelayMode
+                && (event.key === Qt.Key_C || event.key === Qt.Key_Backspace)) {
+            playerController.clearPendingSkipRange()
+            event.accepted = true
+            return
+        }
+
         if (event.key === Qt.Key_A && playerController.paused && !appController.resumePromptVisible) {
             root.audioDelayMode = true
             event.accepted = true

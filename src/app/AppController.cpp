@@ -26,6 +26,15 @@ AppController::AppController(VideoLibraryModel *libraryModel,
     connect(m_playerController, &PlayerController::playbackFinished,
             this, &AppController::handlePlaybackFinished,
             Qt::QueuedConnection);
+
+    connect(m_playerController, &PlayerController::skipRangesChanged, this, [this]() {
+        if (m_currentFilePath.isEmpty())
+            return;
+
+        m_resumeRepository->saveSkipRanges(
+            m_currentFilePath,
+            m_playerController->skipRangesData());
+    });
 }
 
 void AppController::setPlayerCursorHidden(bool hidden)
@@ -144,6 +153,7 @@ void AppController::playSelected(int index)
     m_currentFilePath = item.filePath;
     m_currentVideoName = QFileInfo(item.filePath).completeBaseName();
     m_currentAudioDelay = m_resumeRepository->loadAudioDelay(item.filePath);
+    m_playerController->setSkipRanges(m_resumeRepository->loadSkipRanges(item.filePath));
     emit currentVideoNameChanged();
 
     const double loadedResume = m_resumeRepository->loadPosition(item.filePath);
@@ -170,6 +180,7 @@ bool AppController::deleteCurrentVideo()
         return false;
 
     m_resumeRepository->deletePosition(item.filePath);
+    m_resumeRepository->deleteSkipRanges(item.filePath);
 
     if (!QFile::remove(item.filePath))
         return false;
@@ -216,6 +227,8 @@ void AppController::decideResumePlayback(bool continueFromSavedPosition)
 
 void AppController::closePlayer(bool saveResumePosition)
 {
+    const QString currentFilePath = m_currentFilePath;
+
     if (saveResumePosition && !m_resumePromptVisible) {
         const double pos = m_playerController->position();
         const double dur = m_playerController->duration();
@@ -223,17 +236,19 @@ void AppController::closePlayer(bool saveResumePosition)
         if (dur > 0.0)
             savePos = std::min(savePos, dur);
 
-        if (!m_currentFilePath.isEmpty()) {
+        if (!currentFilePath.isEmpty()) {
             m_resumeRepository->savePosition(
-                m_currentFilePath,
+                currentFilePath,
                 savePos,
                 dur,
                 m_playerController->audioDelay());
-            m_libraryModel->updateResumePosition(m_currentFilePath, savePos);
+            m_libraryModel->updateResumePosition(currentFilePath, savePos);
         }
     }
 
+    m_currentFilePath.clear();
     m_playerController->stop();
+    m_playerController->setSkipRanges({});
     setPlayerCursorHidden(false);
 
     if (m_resumePromptVisible) {
@@ -248,7 +263,6 @@ void AppController::closePlayer(bool saveResumePosition)
     m_playerVisible = false;
     emit playerVisibleChanged();
 
-    m_currentFilePath.clear();
     m_currentAudioDelay = 0.0;
     if (!m_currentVideoName.isEmpty()) {
         m_currentVideoName.clear();

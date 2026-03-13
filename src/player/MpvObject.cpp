@@ -113,6 +113,20 @@ void MpvObject::processMpvEvents()
             m_hasDeferredSeekAfterLoad = false;
             m_deferredSeekAfterLoad = 0.0;
         } else if (event->event_id == MPV_EVENT_END_FILE) {
+            if (m_preserveLastFrameOnEnd) {
+                m_preserveLastFrameOnEnd = false;
+
+                if (m_duration > 0.0 && !qFuzzyCompare(m_position + 1.0, m_duration + 1.0)) {
+                    m_position = m_duration;
+                    emit positionChanged(m_position);
+                }
+                if (!m_paused) {
+                    m_paused = true;
+                    emit pausedChanged(m_paused);
+                }
+                continue;
+            }
+
             if (m_position != 0.0) {
                 m_position = 0.0;
                 emit positionChanged(m_position);
@@ -176,6 +190,7 @@ void MpvObject::playFile(const QString &filePath, double startPosition, double a
 
     m_hasDeferredSeekAfterLoad = startPosition > 0.0;
     m_deferredSeekAfterLoad = startPosition > 0.0 ? startPosition : 0.0;
+    m_preserveLastFrameOnEnd = false;
 
     int unpause = 0;
     mpv_set_property(m_mpv, "pause", MPV_FORMAT_FLAG, &unpause);
@@ -234,6 +249,45 @@ void MpvObject::seekRelative(double seconds)
     }
 }
 
+void MpvObject::seekAbsolute(double seconds)
+{
+    if (!m_mpv)
+        return;
+
+    double target = qMax(0.0, seconds);
+    if (m_duration > 0.0 && target > m_duration)
+        target = m_duration;
+
+    const QByteArray seekPos = QByteArray::number(target, 'f', 3);
+    const char *seekArgs[] = { "seek", seekPos.constData(), "absolute+exact", nullptr };
+    if (mpv_command(m_mpv, seekArgs) < 0)
+        return;
+
+    if (!qFuzzyCompare(m_position + 1.0, target + 1.0)) {
+        m_position = target;
+        emit positionChanged(m_position);
+    }
+}
+
+void MpvObject::frameStep()
+{
+    if (!m_mpv)
+        return;
+
+    m_preserveLastFrameOnEnd = true;
+    const char *stepArgs[] = { "frame-step", nullptr };
+    mpv_command(m_mpv, stepArgs);
+}
+
+void MpvObject::frameBackStep()
+{
+    if (!m_mpv)
+        return;
+
+    const char *stepArgs[] = { "frame-back-step", nullptr };
+    mpv_command(m_mpv, stepArgs);
+}
+
 void MpvObject::stop()
 {
     m_eventTimer.stop();
@@ -250,6 +304,7 @@ void MpvObject::stop()
     m_pendingStartPosition = 0.0;
     m_hasDeferredSeekAfterLoad = false;
     m_deferredSeekAfterLoad = 0.0;
+    m_preserveLastFrameOnEnd = false;
 
     m_position = 0.0;
     m_duration = 0.0;

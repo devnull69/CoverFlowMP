@@ -55,9 +55,19 @@ bool ResumeRepository::initialize()
     }
 
     if (hasAudioDelay)
-        return true;
+        ;
+    else if (!query.exec("ALTER TABLE playback_state ADD COLUMN audio_delay REAL NOT NULL DEFAULT 0"))
+        return false;
 
-    return query.exec("ALTER TABLE playback_state ADD COLUMN audio_delay REAL NOT NULL DEFAULT 0");
+    QSqlQuery skipQuery(m_db);
+    return skipQuery.exec(
+        "CREATE TABLE IF NOT EXISTS skip_ranges ("
+        "file_path TEXT NOT NULL,"
+        "start_pos REAL NOT NULL,"
+        "end_pos REAL NOT NULL,"
+        "updated_at TEXT NOT NULL,"
+        "PRIMARY KEY(file_path, start_pos, end_pos))"
+    );
 }
 
 double ResumeRepository::loadPosition(const QString &filePath) const
@@ -82,6 +92,30 @@ double ResumeRepository::loadAudioDelay(const QString &filePath) const
         return query.value(0).toDouble();
 
     return 0.0;
+}
+
+QVector<SkipRange> ResumeRepository::loadSkipRanges(const QString &filePath) const
+{
+    QVector<SkipRange> ranges;
+
+    QSqlQuery query(m_db);
+    query.prepare(
+        "SELECT start_pos, end_pos FROM skip_ranges "
+        "WHERE file_path = ? ORDER BY start_pos ASC"
+    );
+    query.addBindValue(filePath);
+
+    if (!query.exec())
+        return ranges;
+
+    while (query.next()) {
+        const double start = query.value(0).toDouble();
+        const double end = query.value(1).toDouble();
+        if (end > start)
+            ranges.append({ start, end });
+    }
+
+    return ranges;
 }
 
 bool ResumeRepository::savePosition(const QString &filePath,
@@ -109,6 +143,42 @@ bool ResumeRepository::savePosition(const QString &filePath,
     return query.exec();
 }
 
+bool ResumeRepository::saveSkipRanges(const QString &filePath, const QVector<SkipRange> &ranges)
+{
+    if (!m_db.transaction())
+        return false;
+
+    QSqlQuery deleteQuery(m_db);
+    deleteQuery.prepare("DELETE FROM skip_ranges WHERE file_path = ?");
+    deleteQuery.addBindValue(filePath);
+    if (!deleteQuery.exec()) {
+        m_db.rollback();
+        return false;
+    }
+
+    if (!ranges.isEmpty()) {
+        QSqlQuery insertQuery(m_db);
+        insertQuery.prepare(
+            "INSERT INTO skip_ranges(file_path, start_pos, end_pos, updated_at) "
+            "VALUES(?, ?, ?, ?)"
+        );
+
+        const QString updatedAt = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+        for (const SkipRange &range : ranges) {
+            insertQuery.addBindValue(filePath);
+            insertQuery.addBindValue(range.start);
+            insertQuery.addBindValue(range.end);
+            insertQuery.addBindValue(updatedAt);
+            if (!insertQuery.exec()) {
+                m_db.rollback();
+                return false;
+            }
+        }
+    }
+
+    return m_db.commit();
+}
+
 bool ResumeRepository::deletePosition(const QString &filePath)
 {
     QSqlQuery query(m_db);
@@ -117,8 +187,19 @@ bool ResumeRepository::deletePosition(const QString &filePath)
     return query.exec();
 }
 
+bool ResumeRepository::deleteSkipRanges(const QString &filePath)
+{
+    QSqlQuery query(m_db);
+    query.prepare("DELETE FROM skip_ranges WHERE file_path = ?");
+    query.addBindValue(filePath);
+    return query.exec();
+}
+
 bool ResumeRepository::clearAllPositions()
 {
     QSqlQuery query(m_db);
-    return query.exec("DELETE FROM playback_state");
+    if (!query.exec("DELETE FROM playback_state"))
+        return false;
+
+    return query.exec("DELETE FROM skip_ranges");
 }

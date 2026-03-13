@@ -8,6 +8,9 @@ Item {
     property string videoName: ""
     property double audioDelay: 0
     property bool audioDelayMode: false
+    property var skipRanges: []
+    property bool skipRangePending: false
+    property double pendingSkipStart: 0
 
     function pad2(value) {
         return value < 10 ? "0" + value : "" + value
@@ -34,6 +37,12 @@ Item {
     function audioDelayHandleX(trackWidth, handleWidth) {
         var normalized = (Math.max(-2.0, Math.min(2.0, audioDelay)) + 2.0) / 4.0
         return normalized * Math.max(0, trackWidth - handleWidth)
+    }
+
+    function normalizedTime(value) {
+        if (duration <= 0)
+            return 0
+        return Math.max(0, Math.min(1, value / duration))
     }
 
     Item {
@@ -75,6 +84,21 @@ Item {
                         height: parent.height
                         color: "#39C5FF"
                         radius: parent.radius
+                    }
+
+                    Repeater {
+                        model: root.skipRanges
+
+                        delegate: Rectangle {
+                            property var range: modelData
+
+                            visible: !root.audioDelayMode && duration > 0 && range.end > range.start
+                            x: parent.width * root.normalizedTime(range.start)
+                            width: Math.max(2, parent.width * (root.normalizedTime(range.end) - root.normalizedTime(range.start)))
+                            height: parent.height
+                            color: "#C92A2A"
+                            opacity: 0.95
+                        }
                     }
 
                     Rectangle {
@@ -119,6 +143,25 @@ Item {
                     width: contentColumn.width
                     font.pixelSize: Math.max(20, contentColumn.parent.height * 0.24)
                     font.bold: true
+                }
+
+                Text {
+                    visible: !root.audioDelayMode && root.skipRangePending
+                    text: "Skip-Start: " + formatTime(root.pendingSkipStart) + "   S=Ende   C=Abbrechen   +/-=Frame"
+                    color: "#FFB3B3"
+                    horizontalAlignment: Text.AlignHCenter
+                    width: contentColumn.width
+                    font.pixelSize: Math.max(18, contentColumn.parent.height * 0.18)
+                    font.bold: true
+                }
+
+                Text {
+                    visible: !root.audioDelayMode && !root.skipRangePending
+                    text: "S=Skip setzen   +/-=Frame vor/zurueck"
+                    color: "#D0D0D0"
+                    horizontalAlignment: Text.AlignHCenter
+                    width: contentColumn.width
+                    font.pixelSize: Math.max(18, contentColumn.parent.height * 0.18)
                 }
 
                 Text {
