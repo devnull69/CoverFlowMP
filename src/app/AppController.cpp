@@ -305,14 +305,11 @@ bool AppController::exportCurrentSkipRanges()
         return false;
     }
 
-    QString downloadDir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
-    if (downloadDir.isEmpty())
-        downloadDir = QDir::homePath() + "/Downloads";
-
-    QDir().mkpath(downloadDir);
-
     const QFileInfo fileInfo(m_currentFilePath);
-    const QString exportPath = downloadDir + "/" + fileInfo.completeBaseName() + "_skip.json";
+    const QString videoDir = fileInfo.absolutePath();
+    QDir().mkpath(videoDir);
+
+    const QString exportPath = videoDir + "/" + fileInfo.completeBaseName() + "_skip.json";
 
     QJsonArray jsonRanges;
     for (const SkipRange &range : ranges) {
@@ -344,7 +341,7 @@ bool AppController::exportCurrentSkipRanges()
         return false;
     }
 
-    setPlayerMessage("Skip-Bereiche exportiert nach Downloads.");
+    setPlayerMessage("Skip-Bereiche im Video-Ordner gespeichert.");
     return true;
 }
 
