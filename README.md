@@ -93,6 +93,7 @@ Im Play-Modus läuft das Video normal.
 - `Runter`: 1 Minute zurück
 
 Die Sprünge berücksichtigen immer die Videogrenzen.
+Im Normalmodus werden vorhandene Skip-Bereiche sowohl bei der normalen Wiedergabe als auch bei der Sprung-Navigation automatisch übersprungen.
 
 ## Pause-Modus
 
@@ -115,6 +116,7 @@ Im Pause-Modus ist das Video angehalten. Zusätzlich erscheint ein Overlay mit F
 Wichtig:
 
 - Im Pause-Modus beendet Cursor-Navigation das Video nie. Am Anfang oder Ende bleibt das Bild einfach auf dem ersten bzw. letzten Frame stehen.
+- Im Normalmodus werden vorhandene Skip-Bereiche auch im Pause-Modus bei der Sprung-Navigation automatisch berücksichtigt.
 
 ### Skip-Bereiche bearbeiten
 
