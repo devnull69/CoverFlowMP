@@ -89,3 +89,36 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps
     RENAME coverflowmp.png
 )
+
+set(CPACK_PACKAGE_NAME "coverflowmp")
+set(CPACK_PACKAGE_VENDOR "devnull69")
+set(CPACK_PACKAGE_CONTACT "devnull69")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "CoverFlow-based media center")
+set(CPACK_PACKAGE_DESCRIPTION
+    "CoverFlowMP is a keyboard-driven video media center for Linux."
+)
+set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(CPACK_GENERATOR "DEB")
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+    set(CPACK_DEBIAN_PACKAGE_SECTION "video")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+    # dpkg-shlibdeps sees ELF links like libmpv and the Qt base libraries, but it
+    # cannot infer QML imports or SQL driver plugins loaded at runtime.
+    set(COVERFLOWMP_DEBIAN_RUNTIME_DEPENDS
+        libqt6sql6-sqlite
+        qml6-module-qt5compat-graphicaleffects
+        qml6-module-qtqml
+        qml6-module-qtqml-workerscript
+        qml6-module-qtquick
+        qml6-module-qtquick-controls
+        qml6-module-qtquick-layouts
+        qml6-module-qtquick-templates
+        qml6-module-qtquick-window
+    )
+    list(JOIN COVERFLOWMP_DEBIAN_RUNTIME_DEPENDS ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
+endif()
+
+include(CPack)
