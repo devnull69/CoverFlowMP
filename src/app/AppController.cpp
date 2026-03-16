@@ -153,8 +153,10 @@ void AppController::initialize(const QString &videoFolder)
     auto items = m_scanner->scan(videoFolder);
 
     for (auto &item : items) {
-        if (!item.isFolder && !item.filePath.isEmpty())
+        if (!item.isFolder && !item.filePath.isEmpty()) {
             item.resumePosition = m_resumeRepository->loadPosition(item.filePath);
+            item.duration = m_resumeRepository->loadDuration(item.filePath);
+        }
     }
 
     m_libraryModel->setItems(items);
@@ -512,7 +514,7 @@ void AppController::closePlayer(bool saveResumePosition)
                 savePos,
                 dur,
                 m_playerController->audioDelay());
-            m_libraryModel->updateResumePosition(currentFilePath, savePos);
+            m_libraryModel->updatePlaybackState(currentFilePath, savePos, dur);
         }
     }
 
@@ -547,7 +549,7 @@ void AppController::handlePlaybackFinished()
 {
     if (!m_currentFilePath.isEmpty()) {
         m_resumeRepository->deletePosition(m_currentFilePath);
-        m_libraryModel->updateResumePosition(m_currentFilePath, 0.0);
+        m_libraryModel->updatePlaybackState(m_currentFilePath, 0.0, 0.0);
     }
 
     closePlayer(false);

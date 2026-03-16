@@ -82,6 +82,18 @@ double ResumeRepository::loadPosition(const QString &filePath) const
     return 0.0;
 }
 
+double ResumeRepository::loadDuration(const QString &filePath) const
+{
+    QSqlQuery query(m_db);
+    query.prepare("SELECT duration FROM playback_state WHERE file_path = ?");
+    query.addBindValue(filePath);
+
+    if (query.exec() && query.next())
+        return query.value(0).toDouble();
+
+    return 0.0;
+}
+
 double ResumeRepository::loadAudioDelay(const QString &filePath) const
 {
     QSqlQuery query(m_db);

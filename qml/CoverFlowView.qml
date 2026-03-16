@@ -75,6 +75,8 @@ Item {
                 required property int index
                 required property string title
                 required property string coverPath
+                required property double duration
+                required property double resumePosition
                 required property bool isDemo
                 required property bool isFolder
                 required property bool isParentFolder
@@ -83,6 +85,13 @@ Item {
                 readonly property bool isLeftSide: index < root.currentIndex
                 readonly property bool isRightSide: index > root.currentIndex
                 readonly property int distanceFromCurrent: Math.abs(index - root.currentIndex)
+                readonly property bool showResumeBar: !isFolder
+                                                      && !isParentFolder
+                                                      && duration > 0
+                                                      && resumePosition >= 3.0
+                readonly property real resumeProgress: duration > 0
+                                                      ? Math.max(0, Math.min(1, resumePosition / duration))
+                                                      : 0
 
                 width: root.coverWidth
                 height: root.coverHeight + root.height * 0.18
@@ -218,6 +227,27 @@ Item {
                                 horizontalAlignment: Text.AlignHCenter
                                 wrapMode: Text.WordWrap
                                 width: root.coverWidth - 40
+                            }
+                        }
+
+                        Rectangle {
+                            visible: delegateRoot.showResumeBar
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.leftMargin: (isCurrent ? 3 : 1) + Math.max(3, root.coverWidth * 0.02)
+                            anchors.rightMargin: (isCurrent ? 3 : 1) + Math.max(3, root.coverWidth * 0.02)
+                            anchors.bottomMargin: isCurrent ? 3 : 1
+                            height: Math.max(3, root.coverHeight * 0.022)
+                            color: "#5A1C1C"
+                            opacity: 0.95
+
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: parent.width * delegateRoot.resumeProgress
+                                color: "#E50914"
                             }
                         }
 

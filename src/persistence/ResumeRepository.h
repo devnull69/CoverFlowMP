@@ -15,6 +15,7 @@ public:
 
     bool initialize();
     double loadPosition(const QString &filePath) const;
+    double loadDuration(const QString &filePath) const;
     double loadAudioDelay(const QString &filePath) const;
     QVector<SkipRange> loadSkipRanges(const QString &filePath) const;
     bool savePosition(const QString &filePath,

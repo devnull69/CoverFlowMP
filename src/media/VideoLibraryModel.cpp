@@ -72,6 +72,19 @@ void VideoLibraryModel::updateResumePosition(const QString &filePath, double pos
     }
 }
 
+void VideoLibraryModel::updatePlaybackState(const QString &filePath, double position, double duration)
+{
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (m_items[i].filePath == filePath) {
+            m_items[i].resumePosition = position;
+            m_items[i].duration = duration;
+            const QModelIndex idx = index(i);
+            emit dataChanged(idx, idx, { ResumePositionRole, DurationRole });
+            return;
+        }
+    }
+}
+
 void VideoLibraryModel::updateCoverPath(const QString &filePath, const QString &coverPath)
 {
     for (int i = 0; i < m_items.size(); ++i) {
