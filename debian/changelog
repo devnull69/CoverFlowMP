@@ -1,0 +1,15 @@
+coverflowmp (1.2.4) UNRELEASED; urgency=medium
+
+  * Initial release.
+  * Add application icon and desktop integration
+  * Added time delay functionality
+  * Advanced features
+  * Fast modus added
+  * Newest features like extra keys, dynamic cover extraction while
+    browser is showing already etc
+  * Build changes
+  * More build changes
+  * Skip file auto import
+  * Power saving inhibitor to prevent disruption
+
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Mon, 16 Mar 2026 16:04:38 +0100

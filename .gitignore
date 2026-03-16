@@ -2,3 +2,36 @@
 /obj-x86_64-linux-gnu
 /debian
 /_CPack_Packages
+
+# Keep Debian packaging metadata under version control.
+!/debian/
+/debian/*
+!/debian/README
+!/debian/README.Debian
+!/debian/README.source
+!/debian/changelog
+!/debian/control
+!/debian/copyright
+!/debian/coverflowmp-docs.docs
+!/debian/coverflowmp.cron.d.ex
+!/debian/coverflowmp.doc-base.ex
+!/debian/manpage.1.ex
+!/debian/manpage.md.ex
+!/debian/manpage.sgml.ex
+!/debian/manpage.xml.ex
+!/debian/postinst.ex
+!/debian/postrm.ex
+!/debian/preinst.ex
+!/debian/prerm.ex
+!/debian/rules
+!/debian/salsa-ci.yml.ex
+!/debian/source/
+
+# Ignore Debian build artifacts and staging output.
+/debian/*.debhelper*
+/debian/*.substvars
+/debian/files
+/debian/*/
+!/debian/source/
+/debian/source/*
+!/debian/source/format
