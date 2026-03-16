@@ -14,6 +14,7 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS
     Concurrent
     Core
+    DBus
     Gui
     Quick
     Qml
@@ -30,6 +31,9 @@ qt_add_executable(CoverFlowMPApp
 
     src/app/AppController.h
     src/app/AppController.cpp
+
+    src/platform/SessionInhibitor.h
+    src/platform/SessionInhibitor.cpp
 
     src/media/VideoItem.h
     src/media/VideoLibraryModel.h
@@ -67,6 +71,7 @@ target_link_directories(CoverFlowMPApp PRIVATE
 target_link_libraries(CoverFlowMPApp PRIVATE
     Qt6::Core
     Qt6::Concurrent
+    Qt6::DBus
     Qt6::Gui
     Qt6::Quick
     Qt6::Qml

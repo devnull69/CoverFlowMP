@@ -14,6 +14,7 @@
 #include "src/media/ThumbnailService.h"
 #include "src/player/PlayerController.h"
 #include "src/persistence/ResumeRepository.h"
+#include "src/platform/SessionInhibitor.h"
 
 int main(int argc, char *argv[])
 {
@@ -37,6 +38,12 @@ int main(int argc, char *argv[])
     VideoLibraryModel libraryModel;
     PlayerController playerController;
     AppController appController(&libraryModel, &scanner, &playerController, &resumeRepository);
+    SessionInhibitor sessionInhibitor;
+
+    QObject::connect(&appController, &AppController::playerVisibleChanged, &app, [&]() {
+        sessionInhibitor.setVideoPlaybackActive(appController.playerVisible());
+    });
+    sessionInhibitor.setVideoPlaybackActive(appController.playerVisible());
 
     QCommandLineParser parser;
     parser.setApplicationDescription("CoverFlowMP");

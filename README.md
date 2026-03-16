@@ -99,6 +99,8 @@ Im Normalmodus werden vorhandene Skip-Bereiche sowohl bei der normalen Wiedergab
 
 Im Pause-Modus ist das Video angehalten. Zusätzlich erscheint ein Overlay mit Fortschritt, Position und weiteren Informationen.
 
+Solange ein Video im Player geöffnet ist, fordert CoverFlowMP das System an, keinen Bildschirmschoner, keine automatische Bildschirmabschaltung und nach Möglichkeit keine Idle-Sperre zu aktivieren. Das gilt sowohl im Play- als auch im Pause-Modus.
+
 ### Wiedergabe und Navigation
 
 - `Leertaste`: Wiedergabe fortsetzen
