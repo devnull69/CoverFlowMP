@@ -41,7 +41,7 @@ AppController::AppController(VideoLibraryModel *libraryModel,
             Qt::QueuedConnection);
 
     connect(m_playerController, &PlayerController::skipRangesChanged, this, [this]() {
-        if (m_currentFilePath.isEmpty())
+        if (m_currentFilePath.isEmpty() || m_fastMode)
             return;
 
         m_resumeRepository->saveSkipRanges(
@@ -101,6 +101,11 @@ bool AppController::fastMode() const
     return m_fastMode;
 }
 
+bool AppController::skipImportPromptVisible() const
+{
+    return m_skipImportPromptVisible;
+}
+
 bool AppController::canNavigateUp() const
 {
     if (!m_libraryModel || m_libraryModel->rowCount() <= 0)
@@ -123,10 +128,15 @@ void AppController::startPlayback(double startPosition)
 
     const QString fileToPlay = m_currentFilePath;
     const double audioDelay = m_currentAudioDelay;
-    QMetaObject::invokeMethod(this, [this, fileToPlay, startPosition, audioDelay]() {
+    const bool shouldPromptSkipImport = shouldPromptForSkipImport(fileToPlay);
+    QMetaObject::invokeMethod(this, [this, fileToPlay, startPosition, audioDelay, shouldPromptSkipImport]() {
         if (!m_playerVisible || fileToPlay.isEmpty() || m_currentFilePath != fileToPlay)
             return;
         m_playerController->playFile(fileToPlay, startPosition, audioDelay);
+        if (shouldPromptSkipImport) {
+            m_playerController->togglePause();
+            setSkipImportPromptVisible(true);
+        }
     }, Qt::QueuedConnection);
 }
 
@@ -292,14 +302,15 @@ bool AppController::resetResumeDatabase()
 
 bool AppController::exportCurrentSkipRanges()
 {
+    if (m_fastMode)
+        return false;
+
     if (m_currentFilePath.isEmpty()) {
         setPlayerMessage("Kein aktuelles Video aktiv.");
         return false;
     }
 
-    const QVector<SkipRange> ranges = m_fastMode
-        ? m_resumeRepository->loadSkipRanges(m_currentFilePath)
-        : m_playerController->skipRangesData();
+    const QVector<SkipRange> ranges = m_playerController->skipRangesData();
     if (ranges.isEmpty()) {
         setPlayerMessage("Keine Skip-Bereiche zum Exportieren vorhanden.");
         return false;
@@ -347,6 +358,9 @@ bool AppController::exportCurrentSkipRanges()
 
 bool AppController::importCurrentSkipRanges()
 {
+    if (m_fastMode)
+        return false;
+
     if (m_currentFilePath.isEmpty()) {
         setPlayerMessage("Kein aktuelles Video aktiv.");
         return false;
@@ -400,11 +414,10 @@ bool AppController::importCurrentSkipRanges()
     }
 
     m_playerController->clearPendingSkipRange();
-    if (!m_fastMode)
-        m_playerController->setSkipRanges(ranges);
+    m_playerController->setSkipRanges(ranges);
     if (!m_resumeRepository->saveSkipRanges(
         m_currentFilePath,
-        m_fastMode ? ranges : m_playerController->skipRangesData())) {
+        m_playerController->skipRangesData())) {
         setPlayerMessage("Import fehlgeschlagen.");
         return false;
     }
@@ -414,6 +427,9 @@ bool AppController::importCurrentSkipRanges()
 
 bool AppController::clearCurrentSkipRanges()
 {
+    if (m_fastMode)
+        return false;
+
     if (m_currentFilePath.isEmpty()) {
         setPlayerMessage("Kein aktuelles Video aktiv.");
         return false;
@@ -435,12 +451,33 @@ void AppController::clearPlayerMessage()
     setPlayerMessage(QString());
 }
 
+void AppController::respondToSkipImportPrompt(bool shouldImport)
+{
+    if (!m_skipImportPromptVisible)
+        return;
+
+    setSkipImportPromptVisible(false);
+
+    if (shouldImport) {
+        importCurrentSkipRanges();
+        return;
+    }
+
+    if (m_playerController->paused())
+        m_playerController->togglePause();
+}
+
 void AppController::toggleFastMode()
 {
     m_fastMode = !m_fastMode;
     m_playerController->setSkipHandlingEnabled(!m_fastMode);
     m_playerController->clearPendingSkipRange();
-    m_playerController->setSkipRanges({});
+    m_playerController->setSkipRanges(
+        m_fastMode || m_currentFilePath.isEmpty()
+            ? QVector<SkipRange>()
+            : m_resumeRepository->loadSkipRanges(m_currentFilePath));
+    if (m_fastMode)
+        setSkipImportPromptVisible(false);
     emit fastModeChanged();
 
     if (m_fastMode)
@@ -484,6 +521,7 @@ void AppController::closePlayer(bool saveResumePosition)
     m_playerController->setSkipHandlingEnabled(!m_fastMode);
     m_playerController->setSkipRanges({});
     setPlayerCursorHidden(false);
+    setSkipImportPromptVisible(false);
 
     if (m_resumePromptVisible) {
         m_resumePromptVisible = false;
@@ -549,4 +587,26 @@ void AppController::setPlayerMessage(const QString &message)
 
     m_playerMessage = message;
     emit playerMessageChanged();
+}
+
+bool AppController::shouldPromptForSkipImport(const QString &filePath) const
+{
+    if (m_fastMode || filePath.isEmpty())
+        return false;
+
+    if (!m_resumeRepository->loadSkipRanges(filePath).isEmpty())
+        return false;
+
+    const QFileInfo fileInfo(filePath);
+    const QString importPath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName() + "_skip.json";
+    return QFileInfo::exists(importPath);
+}
+
+void AppController::setSkipImportPromptVisible(bool visible)
+{
+    if (m_skipImportPromptVisible == visible)
+        return;
+
+    m_skipImportPromptVisible = visible;
+    emit skipImportPromptVisibleChanged();
 }

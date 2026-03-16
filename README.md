@@ -122,6 +122,8 @@ Wichtig:
 
 Skip-Bereiche stehen nur im Normalmodus zur Verfügung. Im Fast-Modus sind sie deaktiviert.
 
+Wenn fuer ein Video noch keine Skip-Bereiche gespeichert sind, aber im gleichen Ordner bereits eine passende `*_skip.json` liegt, startet das Video im Normalmodus kurz in den Pause-Modus und fragt den Import an.
+
 - `S`: Skip-Bereich setzen
   Beim ersten Druck wird der Startpunkt gesetzt, beim zweiten Druck der Endpunkt.
 - `C`: Einen begonnenen, aber noch nicht abgeschlossenen Skip-Bereich verwerfen
@@ -168,5 +170,5 @@ Besonderheiten:
 Der Fast-Modus ist für schnelles Anschauen gedacht.
 
 - Skip-Bereiche werden nicht automatisch angewendet
-- Das Setzen neuer Skip-Bereiche ist deaktiviert
+- Das Setzen, Loeschen, Importieren und Exportieren von Skip-Bereichen ist deaktiviert
 - Bereits gespeicherte Skip-Bereiche bleiben erhalten und können später im Normalmodus wieder genutzt werden

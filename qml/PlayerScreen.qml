@@ -11,6 +11,7 @@ Item {
     property bool audioDelayMode: false
     property bool clearSkipDialogVisible: false
     property int clearSkipChoiceIndex: 1 // 0 = JA, 1 = NEIN
+    property int skipImportChoiceIndex: 0 // 0 = JA, 1 = NEIN
     readonly property int audioDelayStepMs: 50
     readonly property int audioDelayMaxMs: 2000
 
@@ -57,6 +58,7 @@ Item {
         } else {
             audioDelayMode = false
             clearSkipDialogVisible = false
+            skipImportChoiceIndex = 0
         }
     }
 
@@ -221,6 +223,75 @@ Item {
                 }
             }
         }
+
+        Rectangle {
+            id: skipImportDialog
+            visible: appController.skipImportPromptVisible
+            anchors.centerIn: parent
+            width: parent.width * 0.42
+            height: parent.height * 0.40
+            radius: 14
+            color: "#D91A1A1A"
+            border.width: 1
+            border.color: "#808080"
+            clip: true
+
+            Column {
+                id: skipImportDialogContent
+                anchors.fill: parent
+                anchors.margins: skipImportDialog.height * 0.08
+                spacing: skipImportDialog.height * 0.06
+
+                Text {
+                    width: skipImportDialogContent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    color: "white"
+                    wrapMode: Text.WordWrap
+                    font.pixelSize: Math.max(20, skipImportDialog.height * 0.09)
+                    font.bold: true
+                    text: "Passende Skip-Datei gefunden. Soll sie importiert werden?"
+                }
+
+                Item {
+                    width: skipImportDialogContent.width
+                    height: skipImportDialog.height * 0.03
+                }
+
+                Rectangle {
+                    width: skipImportDialogContent.width
+                    height: Math.max(56, skipImportDialog.height * 0.20)
+                    radius: 8
+                    color: root.skipImportChoiceIndex === 0 ? "#2AA84A" : "#303030"
+                    border.width: 1
+                    border.color: root.skipImportChoiceIndex === 0 ? "#7CF1A3" : "#666666"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "JA"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: Math.max(22, skipImportDialog.height * 0.10)
+                    }
+                }
+
+                Rectangle {
+                    width: skipImportDialogContent.width
+                    height: Math.max(56, skipImportDialog.height * 0.20)
+                    radius: 8
+                    color: root.skipImportChoiceIndex === 1 ? "#2AA84A" : "#303030"
+                    border.width: 1
+                    border.color: root.skipImportChoiceIndex === 1 ? "#7CF1A3" : "#666666"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "NEIN"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: Math.max(22, skipImportDialog.height * 0.09)
+                    }
+                }
+            }
+        }
     }
 
     Rectangle {
@@ -299,6 +370,11 @@ Item {
                 root.resumeChoiceIndex = 0
         }
 
+        function onSkipImportPromptVisibleChanged() {
+            if (appController.skipImportPromptVisible)
+                root.skipImportChoiceIndex = 0
+        }
+
         function onPlayerMessageChanged() {
             root.messageDialogVisible = appController.playerMessage !== ""
             root.forceActiveFocus()
@@ -316,6 +392,8 @@ Item {
     Keys.onSpacePressed: {
         if (appController.resumePromptVisible)
             return
+        if (appController.skipImportPromptVisible)
+            return
         if (root.audioDelayMode)
             return
         playerController.togglePause()
@@ -323,6 +401,10 @@ Item {
 
     Keys.onLeftPressed: function(event) {
         if (appController.resumePromptVisible) {
+            event.accepted = true
+            return
+        }
+        if (appController.skipImportPromptVisible) {
             event.accepted = true
             return
         }
@@ -345,6 +427,10 @@ Item {
 
     Keys.onRightPressed: function(event) {
         if (appController.resumePromptVisible) {
+            event.accepted = true
+            return
+        }
+        if (appController.skipImportPromptVisible) {
             event.accepted = true
             return
         }
@@ -371,6 +457,11 @@ Item {
             event.accepted = true
             return
         }
+        if (appController.skipImportPromptVisible) {
+            root.skipImportChoiceIndex = 0
+            event.accepted = true
+            return
+        }
         if (root.clearSkipDialogVisible) {
             root.clearSkipChoiceIndex = 0
             event.accepted = true
@@ -391,6 +482,11 @@ Item {
     Keys.onDownPressed: function(event) {
         if (appController.resumePromptVisible) {
             root.resumeChoiceIndex = 1
+            event.accepted = true
+            return
+        }
+        if (appController.skipImportPromptVisible) {
+            root.skipImportChoiceIndex = 1
             event.accepted = true
             return
         }
@@ -417,6 +513,11 @@ Item {
             event.accepted = true
             return
         }
+        if (appController.skipImportPromptVisible) {
+            appController.respondToSkipImportPrompt(root.skipImportChoiceIndex === 0)
+            event.accepted = true
+            return
+        }
         if (root.clearSkipDialogVisible) {
             if (root.clearSkipChoiceIndex === 0)
                 appController.clearCurrentSkipRanges()
@@ -433,6 +534,11 @@ Item {
     Keys.onEnterPressed: function(event) {
         if (root.messageDialogVisible) {
             appController.clearPlayerMessage()
+            event.accepted = true
+            return
+        }
+        if (appController.skipImportPromptVisible) {
+            appController.respondToSkipImportPrompt(root.skipImportChoiceIndex === 0)
             event.accepted = true
             return
         }
@@ -466,6 +572,14 @@ Item {
             return
         }
 
+        if (appController.skipImportPromptVisible) {
+            if (event.key === Qt.Key_Escape || event.key === Qt.Key_B) {
+                appController.respondToSkipImportPrompt(false)
+                event.accepted = true
+            }
+            return
+        }
+
         if (appController.resumePromptVisible)
             return
 
@@ -493,13 +607,13 @@ Item {
             return
         }
 
-        if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_X) {
+        if (playerController.paused && !root.audioDelayMode && !appController.fastMode && event.key === Qt.Key_X) {
             appController.exportCurrentSkipRanges()
             event.accepted = true
             return
         }
 
-        if (playerController.paused && !root.audioDelayMode && event.key === Qt.Key_I) {
+        if (playerController.paused && !root.audioDelayMode && !appController.fastMode && event.key === Qt.Key_I) {
             appController.importCurrentSkipRanges()
             event.accepted = true
             return
@@ -512,7 +626,7 @@ Item {
             return
         }
 
-        if (playerController.paused && !root.audioDelayMode
+        if (playerController.paused && !root.audioDelayMode && !appController.fastMode
                 && (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace)) {
             root.clearSkipChoiceIndex = 1
             root.clearSkipDialogVisible = true

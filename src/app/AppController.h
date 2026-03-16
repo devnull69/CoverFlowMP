@@ -22,6 +22,7 @@ class AppController : public QObject
     Q_PROPERTY(double pendingResumePosition READ pendingResumePosition NOTIFY pendingResumePositionChanged)
     Q_PROPERTY(QString playerMessage READ playerMessage NOTIFY playerMessageChanged)
     Q_PROPERTY(bool fastMode READ fastMode NOTIFY fastModeChanged)
+    Q_PROPERTY(bool skipImportPromptVisible READ skipImportPromptVisible NOTIFY skipImportPromptVisibleChanged)
     Q_PROPERTY(bool canNavigateUp READ canNavigateUp NOTIFY currentIndexChanged)
 
 public:
@@ -38,6 +39,7 @@ public:
     double pendingResumePosition() const;
     QString playerMessage() const;
     bool fastMode() const;
+    bool skipImportPromptVisible() const;
     bool canNavigateUp() const;
 
     Q_INVOKABLE void initialize(const QString &videoFolder);
@@ -50,6 +52,7 @@ public:
     Q_INVOKABLE bool importCurrentSkipRanges();
     Q_INVOKABLE bool clearCurrentSkipRanges();
     Q_INVOKABLE void clearPlayerMessage();
+    Q_INVOKABLE void respondToSkipImportPrompt(bool shouldImport);
     Q_INVOKABLE void toggleFastMode();
     Q_INVOKABLE void backToBrowser();
     Q_INVOKABLE void setCurrentIndex(int index);
@@ -63,6 +66,7 @@ signals:
     void pendingResumePositionChanged();
     void playerMessageChanged();
     void fastModeChanged();
+    void skipImportPromptVisibleChanged();
 
 private:
     void closePlayer(bool saveResumePosition);
@@ -70,6 +74,8 @@ private:
     void setPlayerMessage(const QString &message);
     void setPlayerCursorHidden(bool hidden);
     void startPlayback(double startPosition);
+    bool shouldPromptForSkipImport(const QString &filePath) const;
+    void setSkipImportPromptVisible(bool visible);
     void queueMissingThumbnails(const QVector<VideoItem> &items, quint64 generation);
 
     VideoLibraryModel *m_libraryModel;
@@ -88,6 +94,7 @@ private:
     QString m_currentVideoName;
     QString m_playerMessage;
     bool m_fastMode = false;
+    bool m_skipImportPromptVisible = false;
     double m_pendingResumePosition = 0.0;
     double m_currentAudioDelay = 0.0;
     quint64 m_thumbnailGeneration = 0;
