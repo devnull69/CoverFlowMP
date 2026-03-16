@@ -27,6 +27,22 @@ Item {
     signal activated(int index)
     signal currentIndexChangedByUser(int index)
 
+    function pad2(value) {
+        return value < 10 ? "0" + value : "" + value
+    }
+
+    function formatTime(seconds) {
+        var total = Math.max(0, Math.floor(seconds))
+        var h = Math.floor(total / 3600)
+        var m = Math.floor((total % 3600) / 60)
+        var s = total % 60
+
+        if (h > 0)
+            return h + ":" + pad2(m) + ":" + pad2(s)
+
+        return m + ":" + pad2(s)
+    }
+
     function moveLeft() {
         if (root.currentIndex > 0) {
             currentIndexChangedByUser(root.currentIndex - 1)
@@ -92,6 +108,9 @@ Item {
                 readonly property real resumeProgress: duration > 0
                                                       ? Math.max(0, Math.min(1, resumePosition / duration))
                                                       : 0
+                readonly property bool showDurationLabel: !isFolder
+                                                          && !isParentFolder
+                                                          && duration > 0
 
                 width: root.coverWidth
                 height: root.coverHeight + root.height * 0.18
@@ -248,6 +267,42 @@ Item {
                                 anchors.bottom: parent.bottom
                                 width: parent.width * delegateRoot.resumeProgress
                                 color: "#E50914"
+                            }
+                        }
+
+                        Item {
+                            visible: delegateRoot.showDurationLabel
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.rightMargin: isCurrent ? 8 : 6
+                            anchors.bottomMargin: (isCurrent ? 3 : 1) + Math.max(10, root.coverHeight * 0.045)
+                            width: root.coverWidth * 0.15
+                            height: Math.max(14, root.coverHeight * 0.07)
+
+                            Text {
+                                width: parent.width
+                                height: parent.height
+                                x: 1
+                                y: 1
+                                text: root.formatTime(delegateRoot.duration)
+                                color: "#99000000"
+                                horizontalAlignment: Text.AlignRight
+                                verticalAlignment: Text.AlignVCenter
+                                font.pixelSize: Math.max(10, root.coverHeight * 0.052)
+                                font.bold: true
+                                elide: Text.ElideNone
+                            }
+
+                            Text {
+                                width: parent.width
+                                height: parent.height
+                                text: root.formatTime(delegateRoot.duration)
+                                color: "white"
+                                horizontalAlignment: Text.AlignRight
+                                verticalAlignment: Text.AlignVCenter
+                                font.pixelSize: Math.max(10, root.coverHeight * 0.052)
+                                font.bold: true
+                                elide: Text.ElideNone
                             }
                         }
 
