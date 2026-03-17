@@ -64,3 +64,23 @@ QString ThumbnailService::ensureThumbnail(const QString &videoPath) const
 
     return "";
 }
+
+double ThumbnailService::probeDuration(const QString &videoPath) const
+{
+    QProcess proc;
+    proc.start("ffprobe", {
+                              "-v", "error",
+                              "-show_entries", "format=duration",
+                              "-of", "default=noprint_wrappers=1:nokey=1",
+                              videoPath
+                          });
+    proc.waitForFinished(10000);
+
+    const QString output = QString::fromUtf8(proc.readAllStandardOutput()).trimmed();
+    bool ok = false;
+    const double duration = output.toDouble(&ok);
+    if (!ok || duration <= 0.0)
+        return 0.0;
+
+    return duration;
+}

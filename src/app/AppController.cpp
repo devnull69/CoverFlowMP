@@ -182,13 +182,13 @@ void AppController::initialize(const QString &videoFolder)
     for (auto &item : items) {
         if (!item.isFolder && !item.filePath.isEmpty()) {
             item.resumePosition = m_resumeRepository->loadPosition(item.filePath);
-            item.duration = browserDurationForFile(
-                item.filePath,
-                m_resumeRepository->loadDuration(item.filePath));
+            const double storedDuration = m_resumeRepository->loadDuration(item.filePath);
+            item.duration = browserDurationForFile(item.filePath, storedDuration);
         }
     }
 
     m_libraryModel->setItems(items);
+    queueMissingDurations(items, generation);
     queueMissingThumbnails(items, generation);
 
     const int count = m_libraryModel->rowCount();
@@ -226,6 +226,41 @@ void AppController::queueMissingThumbnails(const QVector<VideoItem> &items, quin
             if (!thumbnailService)
                 return {};
             return thumbnailService->ensureThumbnail(filePath);
+        }));
+    }
+}
+
+void AppController::queueMissingDurations(const QVector<VideoItem> &items, quint64 generation)
+{
+    if (!m_thumbnailService)
+        return;
+
+    for (const auto &item : items) {
+        if (item.isFolder || item.isDemo || item.filePath.isEmpty())
+            continue;
+
+        if (m_resumeRepository->loadDuration(item.filePath) > 0.0)
+            continue;
+
+        const double resumePosition = item.resumePosition;
+        const double audioDelay = m_resumeRepository->loadAudioDelay(item.filePath);
+
+        auto *watcher = new QFutureWatcher<double>(this);
+        connect(watcher, &QFutureWatcher<double>::finished, this, [this, watcher, filePath = item.filePath, resumePosition, audioDelay, generation]() {
+            const double duration = watcher->result();
+            watcher->deleteLater();
+
+            if (generation != m_thumbnailGeneration || duration <= 0.0)
+                return;
+
+            m_resumeRepository->savePosition(filePath, resumePosition, duration, audioDelay);
+            m_libraryModel->updateDuration(filePath, browserDurationForFile(filePath, duration));
+        });
+
+        watcher->setFuture(QtConcurrent::run(&m_thumbnailThreadPool, [thumbnailService = m_thumbnailService, filePath = item.filePath]() -> double {
+            if (!thumbnailService)
+                return 0.0;
+            return thumbnailService->probeDuration(filePath);
         }));
     }
 }

@@ -1,4 +1,4 @@
-coverflowmp (1.3.0) UNRELEASED; urgency=medium
+coverflowmp (1.4.1) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -13,5 +13,7 @@ coverflowmp (1.3.0) UNRELEASED; urgency=medium
   * Power saving inhibitor to prevent disruption
   * Showing clock in Pause Mode, progress and video time in browser
   * Subtract skip ranges in browser
+  * Changed RESET function to optionally restrict to current folder
+  * Bugfix for total videos times in Browser
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Tue, 17 Mar 2026 13:05:26 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Wed, 18 Mar 2026 00:43:47 +0100
