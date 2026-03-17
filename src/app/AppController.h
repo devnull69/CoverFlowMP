@@ -48,6 +48,7 @@ public:
     Q_INVOKABLE bool canDeleteCurrentVideo() const;
     Q_INVOKABLE bool deleteCurrentVideo();
     Q_INVOKABLE bool resetResumeDatabase();
+    Q_INVOKABLE bool resetCurrentFolderResumeDatabase();
     Q_INVOKABLE bool exportCurrentSkipRanges();
     Q_INVOKABLE bool importCurrentSkipRanges();
     Q_INVOKABLE bool clearCurrentSkipRanges();

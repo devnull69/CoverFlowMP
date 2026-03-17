@@ -27,6 +27,7 @@ public:
     bool deletePosition(const QString &filePath);
     bool deleteSkipRanges(const QString &filePath);
     bool clearAllPositions();
+    bool clearFolderEntries(const QString &folderPath);
 
 private:
     QSqlDatabase m_db;

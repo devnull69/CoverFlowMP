@@ -331,6 +331,18 @@ bool AppController::resetResumeDatabase()
     return true;
 }
 
+bool AppController::resetCurrentFolderResumeDatabase()
+{
+    if (m_videoFolder.isEmpty())
+        return false;
+
+    if (!m_resumeRepository->clearFolderEntries(m_videoFolder))
+        return false;
+
+    initialize(m_videoFolder);
+    return true;
+}
+
 bool AppController::exportCurrentSkipRanges()
 {
     if (m_fastMode)

@@ -7,6 +7,7 @@
 #include <QVariant>
 #include <QDateTime>
 #include <QDebug>
+#include <QDir>
 
 ResumeRepository::ResumeRepository(QObject *parent)
     : QObject(parent)
@@ -229,4 +230,48 @@ bool ResumeRepository::clearAllPositions()
         return false;
 
     return query.exec("DELETE FROM skip_ranges");
+}
+
+bool ResumeRepository::clearFolderEntries(const QString &folderPath)
+{
+    if (folderPath.isEmpty())
+        return false;
+
+    const QString normalizedFolder = QDir::cleanPath(folderPath);
+    QString prefix = normalizedFolder;
+    if (!prefix.endsWith('/'))
+        prefix += '/';
+    const QString pattern = prefix + "%";
+    const int prefixLength = prefix.size();
+
+    if (!m_db.transaction())
+        return false;
+
+    QSqlQuery playbackQuery(m_db);
+    playbackQuery.prepare(
+        "DELETE FROM playback_state "
+        "WHERE file_path LIKE ? "
+        "AND INSTR(SUBSTR(file_path, ?), '/') = 0"
+    );
+    playbackQuery.addBindValue(pattern);
+    playbackQuery.addBindValue(prefixLength + 1);
+    if (!playbackQuery.exec()) {
+        m_db.rollback();
+        return false;
+    }
+
+    QSqlQuery skipQuery(m_db);
+    skipQuery.prepare(
+        "DELETE FROM skip_ranges "
+        "WHERE file_path LIKE ? "
+        "AND INSTR(SUBSTR(file_path, ?), '/') = 0"
+    );
+    skipQuery.addBindValue(pattern);
+    skipQuery.addBindValue(prefixLength + 1);
+    if (!skipQuery.exec()) {
+        m_db.rollback();
+        return false;
+    }
+
+    return m_db.commit();
 }
