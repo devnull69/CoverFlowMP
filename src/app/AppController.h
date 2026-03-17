@@ -69,6 +69,8 @@ signals:
     void skipImportPromptVisibleChanged();
 
 private:
+    double browserDurationForFile(const QString &filePath, double storedDuration) const;
+    void refreshBrowserDurations();
     void closePlayer(bool saveResumePosition);
     void handlePlaybackFinished();
     void setPlayerMessage(const QString &message);

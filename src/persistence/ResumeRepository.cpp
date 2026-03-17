@@ -130,6 +130,21 @@ QVector<SkipRange> ResumeRepository::loadSkipRanges(const QString &filePath) con
     return ranges;
 }
 
+double ResumeRepository::loadTotalSkipDuration(const QString &filePath) const
+{
+    QSqlQuery query(m_db);
+    query.prepare(
+        "SELECT COALESCE(SUM(MAX(0, end_pos - start_pos)), 0) "
+        "FROM skip_ranges WHERE file_path = ?"
+    );
+    query.addBindValue(filePath);
+
+    if (query.exec() && query.next())
+        return query.value(0).toDouble();
+
+    return 0.0;
+}
+
 bool ResumeRepository::savePosition(const QString &filePath,
                                     double position,
                                     double duration,

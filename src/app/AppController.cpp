@@ -114,6 +114,33 @@ bool AppController::canNavigateUp() const
     return m_libraryModel->itemAt(0).isParentFolder;
 }
 
+double AppController::browserDurationForFile(const QString &filePath, double storedDuration) const
+{
+    if (filePath.isEmpty())
+        return storedDuration;
+
+    const double safeDuration = std::max(0.0, storedDuration);
+    if (m_fastMode || safeDuration <= 0.0)
+        return safeDuration;
+
+    const double skipDuration = std::max(0.0, m_resumeRepository->loadTotalSkipDuration(filePath));
+    return std::max(0.0, safeDuration - skipDuration);
+}
+
+void AppController::refreshBrowserDurations()
+{
+    if (m_videoFolder.isEmpty())
+        return;
+
+    const int previousIndex = m_currentIndex;
+    initialize(m_videoFolder);
+
+    if (m_libraryModel->rowCount() > 0 && m_currentIndex != previousIndex) {
+        m_currentIndex = std::clamp(previousIndex, 0, m_libraryModel->rowCount() - 1);
+        emit currentIndexChanged();
+    }
+}
+
 void AppController::startPlayback(double startPosition)
 {
     if (m_resumePromptVisible) {
@@ -155,7 +182,9 @@ void AppController::initialize(const QString &videoFolder)
     for (auto &item : items) {
         if (!item.isFolder && !item.filePath.isEmpty()) {
             item.resumePosition = m_resumeRepository->loadPosition(item.filePath);
-            item.duration = m_resumeRepository->loadDuration(item.filePath);
+            item.duration = browserDurationForFile(
+                item.filePath,
+                m_resumeRepository->loadDuration(item.filePath));
         }
     }
 
@@ -482,6 +511,9 @@ void AppController::toggleFastMode()
         setSkipImportPromptVisible(false);
     emit fastModeChanged();
 
+    if (!m_playerVisible)
+        refreshBrowserDurations();
+
     if (m_fastMode)
         setPlayerMessage("Fast-Modus aktiviert. Skip-Bereiche sind deaktiviert.");
     else
@@ -514,7 +546,10 @@ void AppController::closePlayer(bool saveResumePosition)
                 savePos,
                 dur,
                 m_playerController->audioDelay());
-            m_libraryModel->updatePlaybackState(currentFilePath, savePos, dur);
+            m_libraryModel->updatePlaybackState(
+                currentFilePath,
+                savePos,
+                browserDurationForFile(currentFilePath, dur));
         }
     }
 
