@@ -59,6 +59,15 @@ Item {
         return minWidth + (trackWidth - minWidth) * normalizedTime(position)
     }
 
+    function scaledProgressX(normalizedValue, trackWidth, trackHeight) {
+        if (trackWidth <= 0)
+            return 0
+
+        var normalized = Math.max(0, Math.min(1, normalizedValue))
+        var minWidth = Math.min(trackWidth, Math.max(trackHeight, trackWidth * 0.035))
+        return minWidth + (trackWidth - minWidth) * normalized
+    }
+
     Component.onCompleted: updateCurrentClockText()
 
     Timer {
@@ -145,10 +154,19 @@ Item {
 
                             delegate: Rectangle {
                                 property var range: modelData
+                                readonly property real normalizedStart: root.normalizedTime(range.start)
+                                readonly property real startX: normalizedStart <= 0
+                                                              ? 0
+                                                              : root.scaledProgressX(
+                                                                    normalizedStart,
+                                                                    parent.width,
+                                                                    parent.height)
+                                readonly property real endX: root.scaledProgressX(
+                                    root.normalizedTime(range.end), parent.width, parent.height)
 
                                 visible: !root.audioDelayMode && duration > 0 && range.end > range.start
-                                x: parent.width * root.normalizedTime(range.start)
-                                width: Math.max(2, parent.width * (root.normalizedTime(range.end) - root.normalizedTime(range.start)))
+                                x: startX
+                                width: Math.max(2, endX - startX)
                                 height: parent.height
                                 color: "#C92A2A"
                                 radius: parent.radius
