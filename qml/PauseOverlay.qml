@@ -51,6 +51,14 @@ Item {
         return Math.max(0, Math.min(1, value / duration))
     }
 
+    function progressFillWidth(trackWidth, trackHeight) {
+        if (duration <= 0 || trackWidth <= 0)
+            return 0
+
+        var minWidth = Math.min(trackWidth, Math.max(trackHeight, trackWidth * 0.035))
+        return minWidth + (trackWidth - minWidth) * normalizedTime(position)
+    }
+
     Component.onCompleted: updateCurrentClockText()
 
     Timer {
@@ -126,7 +134,7 @@ Item {
 
                         Rectangle {
                             visible: !root.audioDelayMode
-                            width: duration > 0 ? parent.width * (position / duration) : 0
+                            width: root.progressFillWidth(parent.width, parent.height)
                             height: parent.height
                             color: "#39C5FF"
                             radius: parent.radius
