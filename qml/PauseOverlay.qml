@@ -76,8 +76,14 @@ Item {
             width: parent.width * 0.7
 
             Rectangle {
-                anchors.fill: contentColumn
-                anchors.margins: -Math.max(10, parent.height * 0.1)
+                anchors.top: contentColumn.top
+                anchors.bottom: contentColumn.bottom
+                anchors.left: contentColumn.left
+                anchors.right: contentColumn.right
+                anchors.topMargin: -Math.max(20, parent.height * 0.17)
+                anchors.bottomMargin: -Math.max(10, parent.height * 0.1)
+                anchors.leftMargin: -Math.max(10, parent.height * 0.1)
+                anchors.rightMargin: -Math.max(14, parent.width * 0.0325)
                 color: "#66000000"
                 radius: Math.max(12, parent.height * 0.14)
                 z: -1
@@ -106,7 +112,7 @@ Item {
                         color: "#D8D8D8"
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
-                        font.pixelSize: Math.max(8, overlayArea.height * 0.096)
+                        font.pixelSize: Math.max(10, overlayArea.height * 0.115)
                         font.bold: true
                     }
 
