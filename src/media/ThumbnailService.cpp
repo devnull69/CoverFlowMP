@@ -2,9 +2,80 @@
 
 #include <QCryptographicHash>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QProcess>
 #include <QStandardPaths>
+
+#include <mpv/client.h>
+
+namespace {
+
+double probeDurationWithMpv(const QString &videoPath)
+{
+    mpv_handle *mpv = mpv_create();
+    if (!mpv)
+        return 0.0;
+
+    mpv_set_option_string(mpv, "terminal", "no");
+    mpv_set_option_string(mpv, "msg-level", "all=no");
+    mpv_set_option_string(mpv, "vo", "null");
+    mpv_set_option_string(mpv, "ao", "null");
+    mpv_set_option_string(mpv, "pause", "yes");
+    mpv_set_option_string(mpv, "keep-open", "no");
+    mpv_set_option_string(mpv, "idle", "no");
+
+    if (mpv_initialize(mpv) < 0) {
+        mpv_terminate_destroy(mpv);
+        return 0.0;
+    }
+
+    mpv_observe_property(mpv, 0, "duration", MPV_FORMAT_DOUBLE);
+
+    const QByteArray utf8File = QFileInfo(videoPath).absoluteFilePath().toUtf8();
+    const char *loadArgs[] = { "loadfile", utf8File.constData(), "replace", nullptr };
+    if (mpv_command(mpv, loadArgs) < 0) {
+        mpv_terminate_destroy(mpv);
+        return 0.0;
+    }
+
+    QElapsedTimer timer;
+    timer.start();
+
+    while (timer.elapsed() < 10000) {
+        mpv_event *event = mpv_wait_event(mpv, 0.1);
+        if (!event || event->event_id == MPV_EVENT_NONE)
+            continue;
+
+        if (event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
+            auto *prop = static_cast<mpv_event_property *>(event->data);
+            if (!prop || !prop->name || qstrcmp(prop->name, "duration") != 0)
+                continue;
+
+            if (prop->format == MPV_FORMAT_DOUBLE && prop->data) {
+                const double duration = *static_cast<double *>(prop->data);
+                if (duration > 0.0) {
+                    mpv_terminate_destroy(mpv);
+                    return duration;
+                }
+            }
+        } else if (event->event_id == MPV_EVENT_FILE_LOADED) {
+            double duration = 0.0;
+            if (mpv_get_property(mpv, "duration", MPV_FORMAT_DOUBLE, &duration) >= 0
+                && duration > 0.0) {
+                mpv_terminate_destroy(mpv);
+                return duration;
+            }
+        } else if (event->event_id == MPV_EVENT_END_FILE) {
+            break;
+        }
+    }
+
+    mpv_terminate_destroy(mpv);
+    return 0.0;
+}
+
+}
 
 ThumbnailService::ThumbnailService(QObject *parent)
     : QObject(parent)
@@ -67,20 +138,24 @@ QString ThumbnailService::ensureThumbnail(const QString &videoPath) const
 
 double ThumbnailService::probeDuration(const QString &videoPath) const
 {
-    QProcess proc;
-    proc.start("ffprobe", {
-                              "-v", "error",
-                              "-show_entries", "format=duration",
-                              "-of", "default=noprint_wrappers=1:nokey=1",
-                              videoPath
-                          });
-    proc.waitForFinished(10000);
+    const QString ffprobePath = QStandardPaths::findExecutable("ffprobe");
+    if (!ffprobePath.isEmpty()) {
+        QProcess proc;
+        proc.start(ffprobePath, {
+                                 "-v", "error",
+                                 "-show_entries", "format=duration",
+                                 "-of", "default=noprint_wrappers=1:nokey=1",
+                                 videoPath
+                             });
 
-    const QString output = QString::fromUtf8(proc.readAllStandardOutput()).trimmed();
-    bool ok = false;
-    const double duration = output.toDouble(&ok);
-    if (!ok || duration <= 0.0)
-        return 0.0;
+        if (proc.waitForStarted(2000) && proc.waitForFinished(10000)) {
+            const QString output = QString::fromUtf8(proc.readAllStandardOutput()).trimmed();
+            bool ok = false;
+            const double duration = output.toDouble(&ok);
+            if (ok && duration > 0.0)
+                return duration;
+        }
+    }
 
-    return duration;
+    return probeDurationWithMpv(videoPath);
 }

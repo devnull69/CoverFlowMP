@@ -113,6 +113,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # dpkg-shlibdeps sees ELF links like libmpv and the Qt base libraries, but it
     # cannot infer QML imports or SQL driver plugins loaded at runtime.
     set(COVERFLOWMP_DEBIAN_RUNTIME_DEPENDS
+        ffmpeg
+        ffmpegthumbnailer
         libqt6sql6-sqlite
         qml6-module-qt5compat-graphicaleffects
         qml6-module-qtqml

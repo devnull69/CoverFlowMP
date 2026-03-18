@@ -189,6 +189,9 @@ sudo apt install \
 ```
 
 Diese Pakete tauchen bereits als Laufzeitabhaengigkeiten fuer das Binärpaket auf.
+Fuer dieses Projekt sind ausserdem `ffmpeg` und `ffmpegthumbnailer` sinnvoll bzw. noetig, damit
+Vorschaubilder und Laufzeiten auch auf frisch installierten Zielsystemen sofort im Browser
+ermittelt werden koennen.
 
 ## 2.4 Alles in einem Installationsschritt
 
@@ -214,6 +217,8 @@ Optional fuer lokale Laufzeittests zusaetzlich:
 
 ```bash
 sudo apt install \
+  ffmpeg \
+  ffmpegthumbnailer \
   libqt6sql6-sqlite \
   qml6-module-qt5compat-graphicaleffects \
   qml6-module-qtqml \

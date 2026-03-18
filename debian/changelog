@@ -1,4 +1,4 @@
-coverflowmp (1.4.1) UNRELEASED; urgency=medium
+coverflowmp (1.5.0) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -15,5 +15,8 @@ coverflowmp (1.4.1) UNRELEASED; urgency=medium
   * Subtract skip ranges in browser
   * Changed RESET function to optionally restrict to current folder
   * Bugfix for total videos times in Browser
+  * Fall back to libmpv for browser durations when ffprobe is unavailable
+  * Add ffmpeg and ffmpegthumbnailer as runtime dependencies
+  * Bugfix for missing package from ffmpeg
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Wed, 18 Mar 2026 00:43:47 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Wed, 18 Mar 2026 14:39:13 +0100
