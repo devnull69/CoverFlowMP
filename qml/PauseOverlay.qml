@@ -143,6 +143,7 @@ Item {
                                 width: Math.max(2, parent.width * (root.normalizedTime(range.end) - root.normalizedTime(range.start)))
                                 height: parent.height
                                 color: "#C92A2A"
+                                radius: parent.radius
                                 opacity: 0.95
                             }
                         }
