@@ -315,8 +315,45 @@ void AppController::playSelected(int index)
 bool AppController::deleteCurrentVideo()
 {
     const auto item = m_libraryModel->itemAt(m_currentIndex);
-    if (item.filePath.isEmpty() || item.isFolder)
+    if (item.filePath.isEmpty())
         return false;
+
+    if (item.isFolder) {
+        if (item.isParentFolder)
+            return false;
+
+        QDir dir(item.filePath);
+        const QFileInfoList entries = dir.entryInfoList(
+            QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+        const bool canDeleteFolder =
+            entries.isEmpty()
+            || (entries.size() == 1
+                && entries.first().isFile()
+                && entries.first().fileName().compare("folder.jpg", Qt::CaseInsensitive) == 0);
+        if (!canDeleteFolder)
+            return false;
+
+        if (entries.size() == 1 && !QFile::remove(entries.first().absoluteFilePath()))
+            return false;
+
+        if (!dir.rmdir(item.filePath))
+            return false;
+
+        const int previousIndex = m_currentIndex;
+        initialize(m_videoFolder);
+
+        const int count = m_libraryModel->rowCount();
+        int nextIndex = 0;
+        if (count > 0)
+            nextIndex = std::clamp(previousIndex, 0, count - 1);
+
+        if (m_currentIndex != nextIndex) {
+            m_currentIndex = nextIndex;
+            emit currentIndexChanged();
+        }
+
+        return true;
+    }
 
     const QFileInfo fileInfo(item.filePath);
     const QString basePath = fileInfo.absolutePath() + "/" + fileInfo.completeBaseName();
@@ -354,7 +391,28 @@ bool AppController::deleteCurrentVideo()
 bool AppController::canDeleteCurrentVideo() const
 {
     const auto item = m_libraryModel->itemAt(m_currentIndex);
-    return !item.filePath.isEmpty() && !item.isFolder;
+    if (item.filePath.isEmpty() || item.isDemo || item.isParentFolder)
+        return false;
+
+    if (!item.isFolder)
+        return true;
+
+    QDir dir(item.filePath);
+    const QFileInfoList entries = dir.entryInfoList(
+        QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+    return entries.isEmpty()
+           || (entries.size() == 1
+               && entries.first().isFile()
+               && entries.first().fileName().compare("folder.jpg", Qt::CaseInsensitive) == 0);
+}
+
+QString AppController::deleteCurrentPromptText() const
+{
+    const auto item = m_libraryModel->itemAt(m_currentIndex);
+    if (item.isFolder && !item.isParentFolder)
+        return "Diesen Ordner wirklich loeschen?";
+
+    return "Dieses Video wirklich loeschen?";
 }
 
 bool AppController::resetResumeDatabase()

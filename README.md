@@ -66,13 +66,14 @@ Im Browser-Modus bewegst du dich durch Ordner und Videos im CoverFlow.
 
 ### Zusätzliche Funktionen
 
-- `0`: Ausgewähltes Video löschen, nach Sicherheitsabfrage
+- `0`: Ausgewähltes Video löschen oder einen leeren Ordner beziehungsweise einen Ordner nur mit `folder.jpg` löschen, nach Sicherheitsabfrage
 - `F`: Fast-Modus umschalten
 - `R`: Resume- und Skip-Datenbank komplett zurücksetzen, nach Sicherheitsabfrage
 
 Hinweis zur Löschfunktion:
 
 - Beim Löschen eines Videos werden zusätzlich die lokale Cover-Datei `Dateiname.jpg` und die lokale Skip-Datei `Dateiname_skip.json` im selben Ordner mit entfernt, falls vorhanden.
+- Ordner lassen sich nur löschen, wenn sie leer sind oder ausschließlich die Datei `folder.jpg` enthalten. Vor dem Löschen eines solchen Ordners wird `folder.jpg` mit entfernt. Für Ordner erscheint dann die Sicherheitsabfrage `Diesen Ordner wirklich loeschen?`.
 
 ## Play-Modus
 

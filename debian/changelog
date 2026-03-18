@@ -1,4 +1,4 @@
-coverflowmp (1.5.0) UNRELEASED; urgency=medium
+coverflowmp (1.5.1) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -18,5 +18,7 @@ coverflowmp (1.5.0) UNRELEASED; urgency=medium
   * Fall back to libmpv for browser durations when ffprobe is unavailable
   * Add ffmpeg and ffmpegthumbnailer as runtime dependencies
   * Bugfix for missing package from ffmpeg
+  * Add missing indirect QML runtime dependencies for models and shapes
+  * Minor packaging changes
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Wed, 18 Mar 2026 14:39:13 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Wed, 18 Mar 2026 15:27:14 +0100

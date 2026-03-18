@@ -228,7 +228,7 @@ Item {
                 wrapMode: Text.WordWrap
                 font.pixelSize: Math.max(20, deleteDialog.height * 0.09)
                 font.bold: true
-                text: "Dieses Video wirklich loeschen?"
+                text: appController.deleteCurrentPromptText()
             }
 
             Item {
