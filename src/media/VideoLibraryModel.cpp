@@ -24,6 +24,7 @@ QVariant VideoLibraryModel::data(const QModelIndex &index, int role) const
     case FilePathRole: return item.filePath;
     case CoverPathRole: return item.coverPath;
     case DurationRole: return item.duration;
+    case TotalDurationRole: return item.totalDuration;
     case ResumePositionRole: return item.resumePosition;
     case IsDemoRole: return item.isDemo;
     case IsFolderRole: return item.isFolder;
@@ -39,6 +40,7 @@ QHash<int, QByteArray> VideoLibraryModel::roleNames() const
         { FilePathRole, "filePath" },
         { CoverPathRole, "coverPath" },
         { DurationRole, "duration" },
+        { TotalDurationRole, "totalDuration" },
         { ResumePositionRole, "resumePosition" },
         { IsDemoRole, "isDemo" },
         { IsFolderRole, "isFolder" },
@@ -72,26 +74,28 @@ void VideoLibraryModel::updateResumePosition(const QString &filePath, double pos
     }
 }
 
-void VideoLibraryModel::updateDuration(const QString &filePath, double duration)
+void VideoLibraryModel::updateDuration(const QString &filePath, double duration, double totalDuration)
 {
     for (int i = 0; i < m_items.size(); ++i) {
         if (m_items[i].filePath == filePath) {
             m_items[i].duration = duration;
+            m_items[i].totalDuration = totalDuration;
             const QModelIndex idx = index(i);
-            emit dataChanged(idx, idx, { DurationRole });
+            emit dataChanged(idx, idx, { DurationRole, TotalDurationRole });
             return;
         }
     }
 }
 
-void VideoLibraryModel::updatePlaybackState(const QString &filePath, double position, double duration)
+void VideoLibraryModel::updatePlaybackState(const QString &filePath, double position, double duration, double totalDuration)
 {
     for (int i = 0; i < m_items.size(); ++i) {
         if (m_items[i].filePath == filePath) {
             m_items[i].resumePosition = position;
             m_items[i].duration = duration;
+            m_items[i].totalDuration = totalDuration;
             const QModelIndex idx = index(i);
-            emit dataChanged(idx, idx, { ResumePositionRole, DurationRole });
+            emit dataChanged(idx, idx, { ResumePositionRole, DurationRole, TotalDurationRole });
             return;
         }
     }

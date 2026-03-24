@@ -1,4 +1,4 @@
-coverflowmp (1.6.0) UNRELEASED; urgency=medium
+coverflowmp (1.6.1) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -21,5 +21,6 @@ coverflowmp (1.6.0) UNRELEASED; urgency=medium
   * Add missing indirect QML runtime dependencies for models and shapes
   * Minor packaging changes
   * Delete empty folder, style changes for overlay
+  * Bugfixes
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Wed, 18 Mar 2026 23:30:17 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Tue, 24 Mar 2026 19:57:56 +0100

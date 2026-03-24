@@ -14,6 +14,7 @@ public:
         FilePathRole,
         CoverPathRole,
         DurationRole,
+        TotalDurationRole,
         ResumePositionRole,
         IsDemoRole,
         IsFolderRole,
@@ -29,8 +30,8 @@ public:
     void setItems(const QVector<VideoItem> &items);
     VideoItem itemAt(int index) const;
     void updateResumePosition(const QString &filePath, double position);
-    void updateDuration(const QString &filePath, double duration);
-    void updatePlaybackState(const QString &filePath, double position, double duration);
+    void updateDuration(const QString &filePath, double duration, double totalDuration);
+    void updatePlaybackState(const QString &filePath, double position, double duration, double totalDuration);
     void updateCoverPath(const QString &filePath, const QString &coverPath);
 
 private:

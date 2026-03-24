@@ -92,6 +92,7 @@ Item {
                 required property string title
                 required property string coverPath
                 required property double duration
+                required property double totalDuration
                 required property double resumePosition
                 required property bool isDemo
                 required property bool isFolder
@@ -103,10 +104,10 @@ Item {
                 readonly property int distanceFromCurrent: Math.abs(index - root.currentIndex)
                 readonly property bool showResumeBar: !isFolder
                                                       && !isParentFolder
-                                                      && duration > 0
+                                                      && totalDuration > 0
                                                       && resumePosition >= 3.0
-                readonly property real resumeProgress: duration > 0
-                                                      ? Math.max(0, Math.min(1, resumePosition / duration))
+                readonly property real resumeProgress: totalDuration > 0
+                                                      ? Math.max(0, Math.min(1, resumePosition / totalDuration))
                                                       : 0
                 readonly property bool showDurationLabel: !isFolder
                                                           && !isParentFolder

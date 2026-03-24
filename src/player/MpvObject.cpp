@@ -103,12 +103,7 @@ void MpvObject::processMpvEvents()
             if (m_hasDeferredSeekAfterLoad && m_deferredSeekAfterLoad > 0.0) {
                 const QByteArray seekPos = QByteArray::number(m_deferredSeekAfterLoad, 'f', 3);
                 const char *seekArgs[] = { "seek", seekPos.constData(), "absolute+exact", nullptr };
-                if (mpv_command(m_mpv, seekArgs) >= 0) {
-                    if (!qFuzzyCompare(m_position + 1.0, m_deferredSeekAfterLoad + 1.0)) {
-                        m_position = m_deferredSeekAfterLoad;
-                        emit positionChanged(m_position);
-                    }
-                }
+                mpv_command(m_mpv, seekArgs);
             }
             m_hasDeferredSeekAfterLoad = false;
             m_deferredSeekAfterLoad = 0.0;
@@ -198,7 +193,14 @@ void MpvObject::playFile(const QString &filePath, double startPosition, double a
     m_position = 0.0;
     m_duration = 0.0;
     m_paused = false;
-    emitStateSnapshot();
+
+    if (m_hasDeferredSeekAfterLoad) {
+        emit durationChanged(m_duration);
+        emit pausedChanged(m_paused);
+        emit audioDelayChanged(m_audioDelay);
+    } else {
+        emitStateSnapshot();
+    }
 }
 
 void MpvObject::togglePause()

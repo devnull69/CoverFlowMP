@@ -192,6 +192,7 @@ void AppController::initialize(const QString &videoFolder)
         if (!item.isFolder && !item.filePath.isEmpty()) {
             item.resumePosition = m_resumeRepository->loadPosition(item.filePath);
             const double storedDuration = m_resumeRepository->loadDuration(item.filePath);
+            item.totalDuration = storedDuration;
             item.duration = browserDurationForFile(item.filePath, storedDuration);
         }
     }
@@ -263,7 +264,10 @@ void AppController::queueMissingDurations(const QVector<VideoItem> &items, quint
                 return;
 
             m_resumeRepository->savePosition(filePath, resumePosition, duration, audioDelay);
-            m_libraryModel->updateDuration(filePath, browserDurationForFile(filePath, duration));
+            m_libraryModel->updateDuration(
+                filePath,
+                browserDurationForFile(filePath, duration),
+                duration);
         });
 
         watcher->setFuture(QtConcurrent::run(&m_thumbnailThreadPool, [thumbnailService = m_thumbnailService, filePath = item.filePath]() -> double {
@@ -663,7 +667,8 @@ void AppController::closePlayer(bool saveResumePosition)
             m_libraryModel->updatePlaybackState(
                 currentFilePath,
                 savePos,
-                browserDurationForFile(currentFilePath, dur));
+                browserDurationForFile(currentFilePath, dur),
+                dur);
         }
     }
 
@@ -698,7 +703,7 @@ void AppController::handlePlaybackFinished()
 {
     if (!m_currentFilePath.isEmpty()) {
         m_resumeRepository->deletePosition(m_currentFilePath);
-        m_libraryModel->updatePlaybackState(m_currentFilePath, 0.0, 0.0);
+        m_libraryModel->updatePlaybackState(m_currentFilePath, 0.0, 0.0, 0.0);
     }
 
     closePlayer(false);

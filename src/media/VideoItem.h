@@ -8,6 +8,7 @@ struct VideoItem
     QString filePath;
     QString coverPath;
     double duration = 0.0;
+    double totalDuration = 0.0;
     double resumePosition = 0.0;
     bool isDemo = false;
     bool isFolder = false;
