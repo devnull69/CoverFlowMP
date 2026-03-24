@@ -10,6 +10,7 @@ Item {
     property bool resetDialogVisible: false
     property int resetChoiceIndex: 2 // 0 = ALLE, 1 = NUR AKTUELLER ORDNER, 2 = ABBRECHEN
     property bool messageDialogVisible: false
+    property string messageDialogText: ""
 
     Component.onCompleted: {
         forceActiveFocus()
@@ -20,6 +21,7 @@ Item {
             root.deleteDialogVisible = false
             root.resetDialogVisible = false
             root.messageDialogVisible = false
+            root.messageDialogText = ""
             appController.clearPlayerMessage()
             event.accepted = true
             return
@@ -65,6 +67,7 @@ Item {
             return
         }
         if (root.messageDialogVisible) {
+            root.messageDialogText = ""
             appController.clearPlayerMessage()
             root.messageDialogVisible = false
             event.accepted = true
@@ -92,6 +95,7 @@ Item {
             return
         }
         if (root.messageDialogVisible) {
+            root.messageDialogText = ""
             appController.clearPlayerMessage()
             root.messageDialogVisible = false
             event.accepted = true
@@ -150,6 +154,7 @@ Item {
                 && !root.deleteDialogVisible
                 && !root.resetDialogVisible
                 && !root.messageDialogVisible) {
+            root.messageDialogText = ""
             appController.toggleFastMode()
             root.messageDialogVisible = true
             event.accepted = true
@@ -163,10 +168,21 @@ Item {
             return
         }
 
+        if (event.key === Qt.Key_V
+                && !root.deleteDialogVisible
+                && !root.resetDialogVisible
+                && !root.messageDialogVisible) {
+            root.messageDialogText = "Version " + appController.appVersion
+            root.messageDialogVisible = true
+            event.accepted = true
+            return
+        }
+
         if ((root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) && event.key === Qt.Key_B) {
             root.deleteDialogVisible = false
             root.resetDialogVisible = false
             root.messageDialogVisible = false
+            root.messageDialogText = ""
             appController.clearPlayerMessage()
             event.accepted = true
         }
@@ -177,6 +193,10 @@ Item {
 
         function onPlayerMessageChanged() {
             root.messageDialogVisible = appController.playerMessage !== ""
+            if (root.messageDialogVisible)
+                root.messageDialogText = appController.playerMessage
+            else
+                root.messageDialogText = ""
             root.forceActiveFocus()
         }
     }
@@ -384,7 +404,7 @@ Item {
                 wrapMode: Text.WordWrap
                 font.pixelSize: Math.max(20, messageDialog.height * 0.12)
                 font.bold: true
-                text: appController.playerMessage
+                text: root.messageDialogText
             }
 
             Item {

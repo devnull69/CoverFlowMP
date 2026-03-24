@@ -22,6 +22,10 @@
 #include <algorithm>
 #include <cmath>
 
+#ifndef COVERFLOWMP_APP_VERSION
+#define COVERFLOWMP_APP_VERSION "unbekannt"
+#endif
+
 AppController::AppController(VideoLibraryModel *libraryModel,
                              LibraryScanner *scanner,
                              PlayerController *playerController,
@@ -94,6 +98,11 @@ double AppController::pendingResumePosition() const
 QString AppController::playerMessage() const
 {
     return m_playerMessage;
+}
+
+QString AppController::appVersion() const
+{
+    return QStringLiteral(COVERFLOWMP_APP_VERSION);
 }
 
 bool AppController::fastMode() const

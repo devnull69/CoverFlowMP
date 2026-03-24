@@ -54,6 +54,8 @@ QVector<VideoItem> LibraryScanner::scan(const QString &folderPath) const
     const QString currentPath = dir.absolutePath();
     const QString parentPath = QFileInfo(currentPath).dir().absolutePath();
     const bool atRootLevel = !m_rootFolder.isEmpty() && currentPath == m_rootFolder;
+    bool hasRealFolderEntries = false;
+    bool hasVideoEntries = false;
     if (parentPath != currentPath && !atRootLevel) {
         VideoItem parentFolder;
         parentFolder.title = "..";
@@ -79,6 +81,7 @@ QVector<VideoItem> LibraryScanner::scan(const QString &folderPath) const
         item.isParentFolder = false;
         item.isDemo = false;
         items.push_back(item);
+        hasRealFolderEntries = true;
     }
 
     const QFileInfoList files = dir.entryInfoList(
@@ -105,9 +108,10 @@ QVector<VideoItem> LibraryScanner::scan(const QString &folderPath) const
         item.isFolder = false;
         item.isParentFolder = false;
         items.push_back(item);
+        hasVideoEntries = true;
     }
 
-    if (items.isEmpty())
+    if (atRootLevel && !hasRealFolderEntries && !hasVideoEntries)
         return createDemoItems();
 
     return items;

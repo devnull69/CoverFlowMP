@@ -58,12 +58,25 @@ int main(int argc, char *argv[])
         videoFolder = QDir(positionalArgs.first()).absolutePath();
 
         const QDir candidateDir(videoFolder);
+        const QFileInfoList candidateFolders = candidateDir.entryInfoList(
+            QDir::Dirs | QDir::NoDotAndDotDot,
+            QDir::Name
+        );
         const QFileInfoList candidateFiles = candidateDir.entryInfoList(
             QDir::Files | QDir::NoDotAndDotDot,
             QDir::Name
         );
 
-        if (!candidateDir.exists() || candidateFiles.isEmpty())
+        bool hasVideoFiles = false;
+        for (const QFileInfo &fileInfo : candidateFiles) {
+            const QString suffix = fileInfo.suffix().toLower();
+            if (suffix == "mp4" || suffix == "mkv" || suffix == "avi") {
+                hasVideoFiles = true;
+                break;
+            }
+        }
+
+        if (!candidateDir.exists() || (candidateFolders.isEmpty() && !hasVideoFiles))
             videoFolder = defaultVideoFolder;
     }
 

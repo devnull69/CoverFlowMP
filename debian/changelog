@@ -1,4 +1,4 @@
-coverflowmp (1.5.1) UNRELEASED; urgency=medium
+coverflowmp (1.6.0) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -20,5 +20,6 @@ coverflowmp (1.5.1) UNRELEASED; urgency=medium
   * Bugfix for missing package from ffmpeg
   * Add missing indirect QML runtime dependencies for models and shapes
   * Minor packaging changes
+  * Delete empty folder, style changes for overlay
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Wed, 18 Mar 2026 15:27:14 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Wed, 18 Mar 2026 23:30:17 +0100

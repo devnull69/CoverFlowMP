@@ -68,6 +68,16 @@ Item {
         return minWidth + (trackWidth - minWidth) * normalized
     }
 
+    function skipRangeStartX(normalizedValue, trackWidth, trackHeight) {
+        if (trackWidth <= 0)
+            return 0
+
+        var scaledX = scaledProgressX(normalizedValue, trackWidth, trackHeight)
+        var minWidth = Math.min(trackWidth, Math.max(trackHeight, trackWidth * 0.035))
+        var epsilon = Math.max(0.5, trackWidth * 0.001)
+        return scaledX <= minWidth + epsilon ? 0 : scaledX
+    }
+
     Component.onCompleted: updateCurrentClockText()
 
     Timer {
@@ -155,12 +165,10 @@ Item {
                             delegate: Rectangle {
                                 property var range: modelData
                                 readonly property real normalizedStart: root.normalizedTime(range.start)
-                                readonly property real startX: normalizedStart <= 0
-                                                              ? 0
-                                                              : root.scaledProgressX(
-                                                                    normalizedStart,
-                                                                    parent.width,
-                                                                    parent.height)
+                                readonly property real startX: root.skipRangeStartX(
+                                    normalizedStart,
+                                    parent.width,
+                                    parent.height)
                                 readonly property real endX: root.scaledProgressX(
                                     root.normalizedTime(range.end), parent.width, parent.height)
 

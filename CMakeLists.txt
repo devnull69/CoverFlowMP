@@ -1,6 +1,22 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(CoverFlowMP VERSION 0.1 LANGUAGES CXX)
+set(COVERFLOWMP_PACKAGE_VERSION "0.1.0")
+set(COVERFLOWMP_VERSION "0.1.0")
+set(COVERFLOWMP_CHANGELOG "${CMAKE_CURRENT_SOURCE_DIR}/debian/changelog")
+
+if(EXISTS "${COVERFLOWMP_CHANGELOG}")
+    file(STRINGS "${COVERFLOWMP_CHANGELOG}" COVERFLOWMP_CHANGELOG_FIRST_LINE LIMIT_COUNT 1)
+    string(REGEX REPLACE "^[^(]+\\(([^)]+)\\).*$" "\\1"
+        COVERFLOWMP_PACKAGE_VERSION
+        "${COVERFLOWMP_CHANGELOG_FIRST_LINE}"
+    )
+    string(REGEX REPLACE "^([0-9]+(\\.[0-9]+)*)[~+-]?.*$" "\\1"
+        COVERFLOWMP_VERSION
+        "${COVERFLOWMP_PACKAGE_VERSION}"
+    )
+endif()
+
+project(CoverFlowMP VERSION ${COVERFLOWMP_VERSION} LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
@@ -77,6 +93,10 @@ target_link_libraries(CoverFlowMPApp PRIVATE
     Qt6::Qml
     Qt6::Sql
     ${MPV_LIBRARIES}
+)
+
+target_compile_definitions(CoverFlowMPApp PRIVATE
+    COVERFLOWMP_APP_VERSION="${COVERFLOWMP_PACKAGE_VERSION}"
 )
 
 install(TARGETS CoverFlowMPApp

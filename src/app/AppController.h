@@ -21,6 +21,7 @@ class AppController : public QObject
     Q_PROPERTY(bool resumePromptVisible READ resumePromptVisible NOTIFY resumePromptVisibleChanged)
     Q_PROPERTY(double pendingResumePosition READ pendingResumePosition NOTIFY pendingResumePositionChanged)
     Q_PROPERTY(QString playerMessage READ playerMessage NOTIFY playerMessageChanged)
+    Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
     Q_PROPERTY(bool fastMode READ fastMode NOTIFY fastModeChanged)
     Q_PROPERTY(bool skipImportPromptVisible READ skipImportPromptVisible NOTIFY skipImportPromptVisibleChanged)
     Q_PROPERTY(bool canNavigateUp READ canNavigateUp NOTIFY currentIndexChanged)
@@ -38,6 +39,7 @@ public:
     bool resumePromptVisible() const;
     double pendingResumePosition() const;
     QString playerMessage() const;
+    QString appVersion() const;
     bool fastMode() const;
     bool skipImportPromptVisible() const;
     bool canNavigateUp() const;
