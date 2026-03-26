@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 13.0.0, 2026-03-24T19:48:33. -->
+<!-- Written by QtCreator 13.0.0, 2026-03-26T11:05:25. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -399,7 +399,7 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">CMakeProjectManager.CMakeRunConfiguration.CoverFlowMPApp</value>
     <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">CoverFlowMPApp</value>
     <value type="bool" key="ProjectExplorer.RunConfiguration.Customized">true</value>
-    <value type="QString" key="RunConfiguration.Arguments">/media/devnull69/Elements/Privat/Videos</value>
+    <value type="QString" key="RunConfiguration.Arguments">/media/devnull69/INTENSO/Videos</value>
     <value type="bool" key="RunConfiguration.UseCppDebuggerAuto">true</value>
     <value type="bool" key="RunConfiguration.UseLibrarySearchPath">true</value>
     <value type="bool" key="RunConfiguration.UseQmlDebuggerAuto">true</value>

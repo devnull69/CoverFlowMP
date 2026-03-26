@@ -1,4 +1,4 @@
-coverflowmp (1.6.1) UNRELEASED; urgency=medium
+coverflowmp (1.6.2) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -22,5 +22,6 @@ coverflowmp (1.6.1) UNRELEASED; urgency=medium
   * Minor packaging changes
   * Delete empty folder, style changes for overlay
   * Bugfixes
+  * Bugfixes #2
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Tue, 24 Mar 2026 19:57:56 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Tue, 24 Mar 2026 20:16:51 +0100

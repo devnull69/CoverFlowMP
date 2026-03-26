@@ -22,6 +22,14 @@ PlayerController::PlayerController(QObject *parent)
             return;
         }
 
+        if (m_resumeSkipActivationPending) {
+            if (position + 0.05 < m_resumeSkipActivationTarget)
+                return;
+
+            m_resumeSkipActivationPending = false;
+            m_resumeSkipActivationTarget = 0.0;
+        }
+
         maybeSkipCurrentPosition();
     });
 
@@ -98,6 +106,10 @@ QVector<SkipRange> PlayerController::skipRangesData() const
 
 void PlayerController::playFile(const QString &filePath, double startPosition, double audioDelay)
 {
+    m_resumeSkipActivationPending = m_skipHandlingEnabled
+        && !m_skipRanges.isEmpty()
+        && startPosition > 0.0;
+    m_resumeSkipActivationTarget = m_resumeSkipActivationPending ? startPosition : 0.0;
     m_mpv->playFile(filePath, startPosition, audioDelay);
 }
 
@@ -202,6 +214,8 @@ void PlayerController::clearPendingSkipRange()
 void PlayerController::stop()
 {
     m_skipJumpInProgress = false;
+    m_resumeSkipActivationPending = false;
+    m_resumeSkipActivationTarget = 0.0;
     m_playbackFinishedPending = false;
     clearPendingSkipRange();
     m_mpv->stop();

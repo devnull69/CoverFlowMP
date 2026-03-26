@@ -84,5 +84,7 @@ private:
     double m_pendingSkipStart = 0.0;
     bool m_skipHandlingEnabled = true;
     bool m_skipJumpInProgress = false;
+    bool m_resumeSkipActivationPending = false;
+    double m_resumeSkipActivationTarget = 0.0;
     bool m_playbackFinishedPending = false;
 };
