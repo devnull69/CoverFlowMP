@@ -6,3 +6,4 @@ Exec=CoverFlowMPApp
 Icon=coverflowmp
 Terminal=false
 Categories=AudioVideo;Player;
+StartupWMClass=CoverFlowMPApp
