@@ -120,15 +120,21 @@ Item {
                 id: contentColumn
                 spacing: parent.spacing
                 width: parent.width
+                readonly property real audioDelayTextX: contentColumn.width * 0.08 + Math.max(12, contentColumn.width * 0.025)
+                readonly property real audioDelayTextWidth: Math.max(0, contentColumn.width - audioDelayTextX)
 
                 Item {
                     width: contentColumn.width
                     height: Math.max(8, overlayArea.height * 0.12)
 
                     readonly property real clockSlotWidth: contentColumn.width * 0.12
+                    readonly property real audioDelayIconSlotWidth: contentColumn.width * 0.08
                     readonly property real clockGap: Math.max(10, contentColumn.width * 0.018)
-                    readonly property real trackX: root.audioDelayMode ? 0 : clockSlotWidth + clockGap
-                    readonly property real trackWidth: root.audioDelayMode ? width : Math.max(0, width - trackX)
+                    readonly property real audioDelayGap: Math.max(12, contentColumn.width * 0.025)
+                    readonly property real trackX: root.audioDelayMode
+                                                   ? audioDelayIconSlotWidth + audioDelayGap
+                                                   : clockSlotWidth + clockGap
+                    readonly property real trackWidth: Math.max(0, width - trackX)
 
                     Text {
                         visible: !root.audioDelayMode
@@ -140,6 +146,19 @@ Item {
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         font.pixelSize: Math.max(10, overlayArea.height * 0.115)
+                        font.bold: true
+                    }
+
+                    Text {
+                        visible: root.audioDelayMode
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.audioDelayIconSlotWidth
+                        text: "♪"
+                        color: "white"
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        font.pixelSize: Math.max(22, overlayArea.height * 0.26)
                         font.bold: true
                     }
 
@@ -224,10 +243,11 @@ Item {
 
                 Text {
                     visible: root.audioDelayMode
+                    x: contentColumn.audioDelayTextX
                     text: formatAudioDelay()
                     color: "white"
                     horizontalAlignment: Text.AlignHCenter
-                    width: contentColumn.width
+                    width: contentColumn.audioDelayTextWidth
                     font.pixelSize: Math.max(8, overlayArea.height * 0.096)
                     font.bold: true
                 }
@@ -250,10 +270,11 @@ Item {
                 }
 
                 Text {
+                    x: root.audioDelayMode ? contentColumn.audioDelayTextX : 0
                     text: videoName
                     color: "white"
                     horizontalAlignment: Text.AlignHCenter
-                    width: contentColumn.width
+                    width: root.audioDelayMode ? contentColumn.audioDelayTextWidth : contentColumn.width
                     elide: Text.ElideMiddle
                     font.pixelSize: Math.max(10, overlayArea.height * 0.12)
                     font.bold: true
