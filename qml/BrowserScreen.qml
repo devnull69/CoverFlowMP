@@ -11,9 +11,65 @@ Item {
     property int resetChoiceIndex: 2 // 0 = ALLE, 1 = NUR AKTUELLER ORDNER, 2 = ABBRECHEN
     property bool messageDialogVisible: false
     property string messageDialogText: ""
+    property date currentDateTime: new Date()
+
+    function pad2(value) {
+        return value < 10 ? "0" + value : "" + value
+    }
+
+    function weekdayName(value) {
+        var weekdays = [
+            "Sonntag",
+            "Montag",
+            "Dienstag",
+            "Mittwoch",
+            "Donnerstag",
+            "Freitag",
+            "Samstag"
+        ]
+        return weekdays[value]
+    }
+
+    function monthName(value) {
+        var months = [
+            "Januar",
+            "Februar",
+            "März",
+            "April",
+            "Mai",
+            "Juni",
+            "Juli",
+            "August",
+            "September",
+            "Oktober",
+            "November",
+            "Dezember"
+        ]
+        return months[value]
+    }
+
+    function formattedTime() {
+        return pad2(currentDateTime.getHours()) + ":" + pad2(currentDateTime.getMinutes())
+    }
+
+    function formattedDate() {
+        return weekdayName(currentDateTime.getDay())
+                + " "
+                + monthName(currentDateTime.getMonth())
+                + " "
+                + currentDateTime.getDate()
+    }
 
     Component.onCompleted: {
         forceActiveFocus()
+    }
+
+    Timer {
+        interval: 1000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: root.currentDateTime = new Date()
     }
 
     Keys.onEscapePressed: function(event) {
@@ -220,6 +276,70 @@ Item {
 
         onCurrentIndexChangedByUser: function(index) {
             appController.setCurrentIndex(index)
+        }
+    }
+
+    Column {
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: parent.height * 0.045
+        anchors.rightMargin: parent.width * 0.04
+        spacing: Math.max(2, parent.height * 0.005)
+
+        Item {
+            width: timeText.width + 3
+            height: timeText.height + 3
+            anchors.right: parent.right
+
+            Text {
+                id: timeShadow
+                anchors.right: timeText.right
+                x: 3
+                y: 3
+                text: root.formattedTime()
+                color: "#B3000000"
+                font.bold: true
+                font.pixelSize: Math.max(28, root.height * 0.05)
+                horizontalAlignment: Text.AlignRight
+            }
+
+            Text {
+                id: timeText
+                anchors.right: parent.right
+                text: root.formattedTime()
+                color: "white"
+                font.bold: true
+                font.pixelSize: Math.max(28, root.height * 0.05)
+                horizontalAlignment: Text.AlignRight
+            }
+        }
+
+        Item {
+            width: dateText.width + 2
+            height: dateText.height + 2
+            anchors.right: parent.right
+
+            Text {
+                id: dateShadow
+                anchors.right: dateText.right
+                x: 2
+                y: 2
+                text: root.formattedDate()
+                color: "#B3000000"
+                font.bold: true
+                font.pixelSize: Math.max(16, root.height * 0.024)
+                horizontalAlignment: Text.AlignRight
+            }
+
+            Text {
+                id: dateText
+                anchors.right: parent.right
+                text: root.formattedDate()
+                color: "white"
+                font.bold: true
+                font.pixelSize: Math.max(16, root.height * 0.024)
+                horizontalAlignment: Text.AlignRight
+            }
         }
     }
 

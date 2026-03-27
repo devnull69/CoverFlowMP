@@ -1,4 +1,4 @@
-coverflowmp (1.6.3) UNRELEASED; urgency=medium
+coverflowmp (1.6.4) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -24,5 +24,6 @@ coverflowmp (1.6.3) UNRELEASED; urgency=medium
   * Bugfixes
   * Bugfixes #2
   * Better handling of RESUME for videos with skip ranges
+  * Added StartupWMClass to .desktop file
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Thu, 26 Mar 2026 11:10:26 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Thu, 26 Mar 2026 22:53:14 +0100
