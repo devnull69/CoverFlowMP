@@ -1,4 +1,4 @@
-coverflowmp (1.6.4) UNRELEASED; urgency=medium
+coverflowmp (2.0.0) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -25,5 +25,8 @@ coverflowmp (1.6.4) UNRELEASED; urgency=medium
   * Bugfixes #2
   * Better handling of RESUME for videos with skip ranges
   * Added StartupWMClass to .desktop file
+  * Show date and time in browser. Show note icon on audio delay overlay
+  * Add flexible app configuration storage in SQLite with default
+    browser background and folder list
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Thu, 26 Mar 2026 22:53:14 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Fri, 27 Mar 2026 11:21:03 +0100

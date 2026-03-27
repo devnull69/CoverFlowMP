@@ -4,7 +4,8 @@
 #include "../media/LibraryScanner.h"
 #include "../media/ThumbnailService.h"
 #include "../player/PlayerController.h"
-#include "../persistence/ResumeRepository.h"
+#include "../shared/AppConfig.h"
+#include "../shared/AppDatabase.h"
 #include <QFutureWatcher>
 #include <QCursor>
 #include <QCoreApplication>
@@ -26,16 +27,29 @@
 #define COVERFLOWMP_APP_VERSION "unbekannt"
 #endif
 
+namespace {
+
+QString expandUserPath(const QString &path)
+{
+    if (path == QStringLiteral("~"))
+        return QDir::homePath();
+    if (path.startsWith(QStringLiteral("~/")))
+        return QDir::homePath() + path.mid(1);
+    return path;
+}
+
+}
+
 AppController::AppController(VideoLibraryModel *libraryModel,
                              LibraryScanner *scanner,
                              PlayerController *playerController,
-                             ResumeRepository *resumeRepository,
+                             AppDatabase *database,
                              QObject *parent)
     : QObject(parent),
     m_libraryModel(libraryModel),
     m_scanner(scanner),
     m_playerController(playerController),
-    m_resumeRepository(resumeRepository),
+    m_database(database),
     m_thumbnailService(scanner ? scanner->thumbnailService() : nullptr)
 {
     m_thumbnailThreadPool.setMaxThreadCount(2);
@@ -48,7 +62,7 @@ AppController::AppController(VideoLibraryModel *libraryModel,
         if (m_currentFilePath.isEmpty() || m_fastMode)
             return;
 
-        m_resumeRepository->saveSkipRanges(
+        m_database->saveSkipRanges(
             m_currentFilePath,
             m_playerController->skipRangesData());
     });
@@ -105,6 +119,30 @@ QString AppController::appVersion() const
     return QStringLiteral(COVERFLOWMP_APP_VERSION);
 }
 
+QUrl AppController::browserBackgroundSource() const
+{
+    const QString configuredBackground = m_database
+        ? m_database->loadConfigString(AppConfig::browserBackgroundKey(),
+                                       AppConfig::defaultBrowserBackground())
+        : AppConfig::defaultBrowserBackground();
+
+    if (configuredBackground.isEmpty()
+        || configuredBackground == AppConfig::defaultBrowserBackground()) {
+        return defaultBrowserBackgroundSource();
+    }
+
+    const QFileInfo backgroundFile(expandUserPath(configuredBackground));
+    if (backgroundFile.exists() && backgroundFile.isFile())
+        return QUrl::fromLocalFile(backgroundFile.absoluteFilePath());
+
+    return defaultBrowserBackgroundSource();
+}
+
+QUrl AppController::defaultBrowserBackgroundSource() const
+{
+    return QUrl(QStringLiteral("qrc:/assets/wallpaper.jpg"));
+}
+
 bool AppController::fastMode() const
 {
     return m_fastMode;
@@ -132,7 +170,7 @@ double AppController::browserDurationForFile(const QString &filePath, double sto
     if (m_fastMode || safeDuration <= 0.0)
         return safeDuration;
 
-    const double skipDuration = std::max(0.0, m_resumeRepository->loadTotalSkipDuration(filePath));
+    const double skipDuration = std::max(0.0, m_database->loadTotalSkipDuration(filePath));
     return std::max(0.0, safeDuration - skipDuration);
 }
 
@@ -190,8 +228,8 @@ void AppController::initialize(const QString &videoFolder)
 
     for (auto &item : items) {
         if (!item.isFolder && !item.filePath.isEmpty()) {
-            item.resumePosition = m_resumeRepository->loadPosition(item.filePath);
-            const double storedDuration = m_resumeRepository->loadDuration(item.filePath);
+            item.resumePosition = m_database->loadPosition(item.filePath);
+            const double storedDuration = m_database->loadDuration(item.filePath);
             item.totalDuration = storedDuration;
             item.duration = browserDurationForFile(item.filePath, storedDuration);
         }
@@ -249,11 +287,11 @@ void AppController::queueMissingDurations(const QVector<VideoItem> &items, quint
         if (item.isFolder || item.isDemo || item.filePath.isEmpty())
             continue;
 
-        if (m_resumeRepository->loadDuration(item.filePath) > 0.0)
+        if (m_database->loadDuration(item.filePath) > 0.0)
             continue;
 
         const double resumePosition = item.resumePosition;
-        const double audioDelay = m_resumeRepository->loadAudioDelay(item.filePath);
+        const double audioDelay = m_database->loadAudioDelay(item.filePath);
 
         auto *watcher = new QFutureWatcher<double>(this);
         connect(watcher, &QFutureWatcher<double>::finished, this, [this, watcher, filePath = item.filePath, resumePosition, audioDelay, generation]() {
@@ -263,7 +301,7 @@ void AppController::queueMissingDurations(const QVector<VideoItem> &items, quint
             if (generation != m_thumbnailGeneration || duration <= 0.0)
                 return;
 
-            m_resumeRepository->savePosition(filePath, resumePosition, duration, audioDelay);
+            m_database->savePosition(filePath, resumePosition, duration, audioDelay);
             m_libraryModel->updateDuration(
                 filePath,
                 browserDurationForFile(filePath, duration),
@@ -302,13 +340,13 @@ void AppController::playSelected(int index)
 
     m_currentFilePath = item.filePath;
     m_currentVideoName = QFileInfo(item.filePath).completeBaseName();
-    m_currentAudioDelay = m_resumeRepository->loadAudioDelay(item.filePath);
+    m_currentAudioDelay = m_database->loadAudioDelay(item.filePath);
     m_playerController->setSkipHandlingEnabled(!m_fastMode);
     m_playerController->setSkipRanges(
-        m_fastMode ? QVector<SkipRange>() : m_resumeRepository->loadSkipRanges(item.filePath));
+        m_fastMode ? QVector<SkipRange>() : m_database->loadSkipRanges(item.filePath));
     emit currentVideoNameChanged();
 
-    const double loadedResume = m_resumeRepository->loadPosition(item.filePath);
+    const double loadedResume = m_database->loadPosition(item.filePath);
     const double resumePosition = std::isfinite(loadedResume) ? std::max(0.0, loadedResume) : 0.0;
 
     if (resumePosition > 3.0) {
@@ -373,8 +411,8 @@ bool AppController::deleteCurrentVideo()
     const QString coverPath = basePath + ".jpg";
     const QString skipFilePath = basePath + "_skip.json";
 
-    m_resumeRepository->deletePosition(item.filePath);
-    m_resumeRepository->deleteSkipRanges(item.filePath);
+    m_database->deletePosition(item.filePath);
+    m_database->deleteSkipRanges(item.filePath);
 
     if (!QFile::remove(item.filePath))
         return false;
@@ -430,7 +468,7 @@ QString AppController::deleteCurrentPromptText() const
 
 bool AppController::resetResumeDatabase()
 {
-    if (!m_resumeRepository->clearAllPositions())
+    if (!m_database->clearAllPlaybackState())
         return false;
 
     initialize(m_videoFolder);
@@ -442,7 +480,7 @@ bool AppController::resetCurrentFolderResumeDatabase()
     if (m_videoFolder.isEmpty())
         return false;
 
-    if (!m_resumeRepository->clearFolderEntries(m_videoFolder))
+    if (!m_database->clearFolderPlaybackState(m_videoFolder))
         return false;
 
     initialize(m_videoFolder);
@@ -564,7 +602,7 @@ bool AppController::importCurrentSkipRanges()
 
     m_playerController->clearPendingSkipRange();
     m_playerController->setSkipRanges(ranges);
-    if (!m_resumeRepository->saveSkipRanges(
+    if (!m_database->saveSkipRanges(
         m_currentFilePath,
         m_playerController->skipRangesData())) {
         setPlayerMessage("Import fehlgeschlagen.");
@@ -587,7 +625,7 @@ bool AppController::clearCurrentSkipRanges()
     m_playerController->clearPendingSkipRange();
     m_playerController->setSkipRanges({});
 
-    if (!m_resumeRepository->deleteSkipRanges(m_currentFilePath)) {
+    if (!m_database->deleteSkipRanges(m_currentFilePath)) {
         setPlayerMessage("Skip-Bereiche konnten nicht geloescht werden.");
         return false;
     }
@@ -624,7 +662,7 @@ void AppController::toggleFastMode()
     m_playerController->setSkipRanges(
         m_fastMode || m_currentFilePath.isEmpty()
             ? QVector<SkipRange>()
-            : m_resumeRepository->loadSkipRanges(m_currentFilePath));
+            : m_database->loadSkipRanges(m_currentFilePath));
     if (m_fastMode)
         setSkipImportPromptVisible(false);
     emit fastModeChanged();
@@ -659,7 +697,7 @@ void AppController::closePlayer(bool saveResumePosition)
             savePos = std::min(savePos, dur);
 
         if (!currentFilePath.isEmpty()) {
-            m_resumeRepository->savePosition(
+            m_database->savePosition(
                 currentFilePath,
                 savePos,
                 dur,
@@ -702,7 +740,7 @@ void AppController::closePlayer(bool saveResumePosition)
 void AppController::handlePlaybackFinished()
 {
     if (!m_currentFilePath.isEmpty()) {
-        m_resumeRepository->deletePosition(m_currentFilePath);
+        m_database->deletePosition(m_currentFilePath);
         m_libraryModel->updatePlaybackState(m_currentFilePath, 0.0, 0.0, 0.0);
     }
 
@@ -750,7 +788,7 @@ bool AppController::shouldPromptForSkipImport(const QString &filePath) const
     if (m_fastMode || filePath.isEmpty())
         return false;
 
-    if (!m_resumeRepository->loadSkipRanges(filePath).isEmpty())
+    if (!m_database->loadSkipRanges(filePath).isEmpty())
         return false;
 
     const QFileInfo fileInfo(filePath);

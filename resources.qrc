@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/">
+        <file>qml/app/Main.qml</file>
+        <file>qml/configurator/Main.qml</file>
         <file>qml/Main.qml</file>
         <file>qml/BrowserScreen.qml</file>
         <file>qml/CoverFlowView.qml</file>
@@ -7,5 +9,6 @@
         <file>qml/PauseOverlay.qml</file>
         <file>assets/wallpaper.jpg</file>
         <file>assets/appicon.png</file>
+        <file>assets/configurator-icon.svg</file>
     </qresource>
 </RCC>

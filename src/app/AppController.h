@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QUrl>
 #include <QThreadPool>
 #include <QVector>
 #include "../media/VideoItem.h"
@@ -9,7 +10,7 @@
 class VideoLibraryModel;
 class LibraryScanner;
 class PlayerController;
-class ResumeRepository;
+class AppDatabase;
 class ThumbnailService;
 
 class AppController : public QObject
@@ -22,6 +23,8 @@ class AppController : public QObject
     Q_PROPERTY(double pendingResumePosition READ pendingResumePosition NOTIFY pendingResumePositionChanged)
     Q_PROPERTY(QString playerMessage READ playerMessage NOTIFY playerMessageChanged)
     Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
+    Q_PROPERTY(QUrl browserBackgroundSource READ browserBackgroundSource CONSTANT)
+    Q_PROPERTY(QUrl defaultBrowserBackgroundSource READ defaultBrowserBackgroundSource CONSTANT)
     Q_PROPERTY(bool fastMode READ fastMode NOTIFY fastModeChanged)
     Q_PROPERTY(bool skipImportPromptVisible READ skipImportPromptVisible NOTIFY skipImportPromptVisibleChanged)
     Q_PROPERTY(bool canNavigateUp READ canNavigateUp NOTIFY currentIndexChanged)
@@ -30,7 +33,7 @@ public:
     explicit AppController(VideoLibraryModel *libraryModel,
                            LibraryScanner *scanner,
                            PlayerController *playerController,
-                           ResumeRepository *resumeRepository,
+                           AppDatabase *database,
                            QObject *parent = nullptr);
 
     bool playerVisible() const;
@@ -40,6 +43,8 @@ public:
     double pendingResumePosition() const;
     QString playerMessage() const;
     QString appVersion() const;
+    QUrl browserBackgroundSource() const;
+    QUrl defaultBrowserBackgroundSource() const;
     bool fastMode() const;
     bool skipImportPromptVisible() const;
     bool canNavigateUp() const;
@@ -88,7 +93,7 @@ private:
     VideoLibraryModel *m_libraryModel;
     LibraryScanner *m_scanner;
     PlayerController *m_playerController;
-    ResumeRepository *m_resumeRepository;
+    AppDatabase *m_database;
     ThumbnailService *m_thumbnailService;
 
     bool m_playerVisible = false;

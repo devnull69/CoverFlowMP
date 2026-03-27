@@ -1,0 +1,61 @@
+#pragma once
+
+#include <QObject>
+#include <QStringList>
+#include <QSqlDatabase>
+#include <QVector>
+
+#include "../player/SkipRange.h"
+#include "AppConfig.h"
+
+class AppDatabase : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit AppDatabase(QObject *parent = nullptr);
+    ~AppDatabase();
+
+    bool initialize();
+
+    double loadPosition(const QString &filePath) const;
+    double loadDuration(const QString &filePath) const;
+    double loadAudioDelay(const QString &filePath) const;
+    QVector<SkipRange> loadSkipRanges(const QString &filePath) const;
+    double loadTotalSkipDuration(const QString &filePath) const;
+
+    QString loadConfigString(const QString &key,
+                             const QString &fallback = QString()) const;
+    QStringList loadConfigStringList(const QString &key,
+                                     const QStringList &fallback = QStringList()) const;
+
+    bool savePosition(const QString &filePath,
+                      double position,
+                      double duration = 0.0,
+                      double audioDelay = 0.0);
+    bool saveSkipRanges(const QString &filePath, const QVector<SkipRange> &ranges);
+    bool saveConfigString(const QString &key, const QString &value);
+    bool saveConfigStringList(const QString &key, const QStringList &values);
+
+    bool deletePosition(const QString &filePath);
+    bool deleteSkipRanges(const QString &filePath);
+    bool clearAllPlaybackState();
+    bool clearFolderPlaybackState(const QString &folderPath);
+
+private:
+    struct ConfigRecord {
+        QString value;
+        QString valueType;
+        bool found = false;
+    };
+
+    bool ensureDefaultConfiguration();
+    ConfigRecord loadConfigRecord(const QString &key) const;
+    bool saveConfigValue(const QString &key,
+                         const QString &value,
+                         AppConfig::ValueType valueType);
+    static QString serializeStringList(const QStringList &values);
+
+    QSqlDatabase m_db;
+    QString m_connectionName;
+};

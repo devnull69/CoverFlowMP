@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=CoverFlowMP Konfigurator
+Comment=Konfigurator fuer CoverFlowMP
+Exec=CoverFlowMPConfigurator
+Icon=coverflowmp-configurator
+Terminal=false
+Categories=Settings;Utility;
+StartupWMClass=CoverFlowMPConfigurator

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
-set(COVERFLOWMP_PACKAGE_VERSION "0.1.0")
-set(COVERFLOWMP_VERSION "0.1.0")
+set(COVERFLOWMP_PACKAGE_VERSION "2.0.0")
+set(COVERFLOWMP_VERSION "2.0.0")
 set(COVERFLOWMP_CHANGELOG "${CMAKE_CURRENT_SOURCE_DIR}/debian/changelog")
 
 if(EXISTS "${COVERFLOWMP_CHANGELOG}")
@@ -35,6 +35,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     Quick
     Qml
     Sql
+    Widgets
 )
 
 find_package(PkgConfig REQUIRED)
@@ -42,9 +43,28 @@ pkg_check_modules(MPV REQUIRED mpv)
 
 qt_standard_project_setup(REQUIRES 6.5)
 
-qt_add_executable(CoverFlowMPApp
-    main.cpp
+add_library(CoverFlowShared STATIC
+    src/shared/AppConfig.h
+    src/shared/AppConfig.cpp
+    src/shared/AppPaths.h
+    src/shared/AppPaths.cpp
+    src/shared/AppLaunchGuard.h
+    src/shared/AppLaunchGuard.cpp
+    src/shared/AppDatabase.h
+    src/shared/AppDatabase.cpp
+)
 
+target_include_directories(CoverFlowShared PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(CoverFlowShared PUBLIC
+    Qt6::Core
+    Qt6::Sql
+)
+
+qt_add_executable(CoverFlowMPApp
+    src/app/main.cpp
     src/app/AppController.h
     src/app/AppController.cpp
 
@@ -65,15 +85,23 @@ qt_add_executable(CoverFlowMPApp
     src/player/PlayerController.cpp
     src/player/SkipRange.h
 
-    src/persistence/ResumeRepository.h
-    src/persistence/ResumeRepository.cpp
+    resources.qrc
+)
 
+qt_add_executable(CoverFlowMPConfigurator
+    src/configurator/main.cpp
+    src/configurator/ConfiguratorController.h
+    src/configurator/ConfiguratorController.cpp
     resources.qrc
 )
 
 target_include_directories(CoverFlowMPApp PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${MPV_INCLUDE_DIRS}
+)
+
+target_include_directories(CoverFlowMPConfigurator PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_compile_options(CoverFlowMPApp PRIVATE
@@ -85,14 +113,24 @@ target_link_directories(CoverFlowMPApp PRIVATE
 )
 
 target_link_libraries(CoverFlowMPApp PRIVATE
+    CoverFlowShared
     Qt6::Core
     Qt6::Concurrent
     Qt6::DBus
     Qt6::Gui
     Qt6::Quick
     Qt6::Qml
-    Qt6::Sql
+    Qt6::Widgets
     ${MPV_LIBRARIES}
+)
+
+target_link_libraries(CoverFlowMPConfigurator PRIVATE
+    CoverFlowShared
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Quick
+    Qt6::Qml
+    Qt6::Widgets
 )
 
 target_compile_definitions(CoverFlowMPApp PRIVATE
@@ -104,8 +142,14 @@ install(TARGETS CoverFlowMPApp
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+install(TARGETS CoverFlowMPConfigurator
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
 install(FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/packaging/coverflowmp.desktop
+    ${CMAKE_CURRENT_SOURCE_DIR}/packaging/coverflowmp-configurator.desktop
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
 )
 
@@ -113,6 +157,12 @@ install(FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/assets/appicon.png
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps
     RENAME coverflowmp.png
+)
+
+install(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/assets/configurator-icon.svg
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps
+    RENAME coverflowmp-configurator.svg
 )
 
 set(CPACK_PACKAGE_NAME "coverflowmp")
