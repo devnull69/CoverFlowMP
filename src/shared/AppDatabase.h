@@ -13,10 +13,26 @@ class AppDatabase : public QObject
     Q_OBJECT
 
 public:
+    struct LegacyMergeResult {
+        enum class Status {
+            AlreadyChecked,
+            NoLegacyDatabase,
+            Merged,
+            Failed
+        };
+
+        Status status = Status::AlreadyChecked;
+        int mergedPlaybackRows = 0;
+        int mergedSkipFiles = 0;
+        QString legacyDatabasePath;
+        QString errorMessage;
+    };
+
     explicit AppDatabase(QObject *parent = nullptr);
     ~AppDatabase();
 
     bool initialize();
+    LegacyMergeResult mergeLegacyDatabaseOnce();
 
     double loadPosition(const QString &filePath) const;
     double loadDuration(const QString &filePath) const;
@@ -54,6 +70,16 @@ private:
     bool saveConfigValue(const QString &key,
                          const QString &value,
                          AppConfig::ValueType valueType);
+    bool savePositionRecord(const QString &filePath,
+                            double position,
+                            double duration,
+                            double audioDelay,
+                            const QString &updatedAt);
+    bool replaceSkipRangesRecords(const QString &filePath,
+                                  const QVector<SkipRange> &ranges,
+                                  const QVector<QString> &updatedAtValues,
+                                  bool manageTransaction = true);
+    bool markLegacyMergeChecked();
     static QString serializeStringList(const QStringList &values);
 
     QSqlDatabase m_db;

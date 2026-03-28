@@ -12,6 +12,11 @@ QString libraryFoldersKey()
     return QStringLiteral("library.folders");
 }
 
+QString legacyPlaybackMergeCheckedKey()
+{
+    return QStringLiteral("migration.legacyPlaybackMergeChecked");
+}
+
 QString defaultBrowserBackground()
 {
     return QStringLiteral("default");

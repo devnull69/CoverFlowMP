@@ -12,6 +12,7 @@ enum class ValueType {
 
 QString browserBackgroundKey();
 QString libraryFoldersKey();
+QString legacyPlaybackMergeCheckedKey();
 
 QString defaultBrowserBackground();
 QStringList defaultLibraryFolders();

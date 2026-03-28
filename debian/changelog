@@ -28,5 +28,6 @@ coverflowmp (2.0.0) UNRELEASED; urgency=medium
   * Show date and time in browser. Show note icon on audio delay overlay
   * Add flexible app configuration storage in SQLite with default
     browser background and folder list
+  * Configurator added
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Fri, 27 Mar 2026 11:21:03 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Fri, 27 Mar 2026 12:26:07 +0100

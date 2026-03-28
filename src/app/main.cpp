@@ -70,6 +70,42 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    const AppDatabase::LegacyMergeResult legacyMergeResult = database.mergeLegacyDatabaseOnce();
+    switch (legacyMergeResult.status) {
+    case AppDatabase::LegacyMergeResult::Status::Merged: {
+        QString message;
+        if (legacyMergeResult.mergedPlaybackRows > 0 || legacyMergeResult.mergedSkipFiles > 0) {
+            message =
+                QStringLiteral("Es wurde eine alte Wiedergabe-Datenbank gefunden und einmalig uebernommen.\n\n"
+                               "Resume-Eintraege: %1\n"
+                               "Skip-Dateien: %2")
+                    .arg(legacyMergeResult.mergedPlaybackRows)
+                    .arg(legacyMergeResult.mergedSkipFiles);
+        } else {
+            message =
+                QStringLiteral("Es wurde eine alte Wiedergabe-Datenbank gefunden, aber es waren keine uebernehmbaren Daten vorhanden.");
+        }
+
+        QMessageBox::information(nullptr,
+                                 QStringLiteral("CoverFlowMP"),
+                                 message);
+        break;
+    }
+    case AppDatabase::LegacyMergeResult::Status::Failed: {
+        const QString details = legacyMergeResult.errorMessage.isEmpty()
+            ? QStringLiteral("Unbekannter Fehler.")
+            : legacyMergeResult.errorMessage;
+        QMessageBox::warning(nullptr,
+                             QStringLiteral("CoverFlowMP"),
+                             QStringLiteral("Die alte Wiedergabe-Datenbank konnte nicht automatisch uebernommen werden.\n\n%1")
+                                 .arg(details));
+        break;
+    }
+    case AppDatabase::LegacyMergeResult::Status::AlreadyChecked:
+    case AppDatabase::LegacyMergeResult::Status::NoLegacyDatabase:
+        break;
+    }
+
     ThumbnailService thumbnailService;
     LibraryScanner scanner(&thumbnailService);
 

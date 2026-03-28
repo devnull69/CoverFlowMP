@@ -4,11 +4,15 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QFileInfo>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonValue>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QSqlDriver>
+#include <QStandardPaths>
 #include <QUuid>
 
 namespace {
@@ -17,6 +21,47 @@ QString currentUtcTimestamp()
 {
     return QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
 }
+
+QString normalizedTimestampForComparison(const QString &timestamp)
+{
+    const QDateTime parsed = QDateTime::fromString(timestamp, Qt::ISODate);
+    if (parsed.isValid())
+        return parsed.toUTC().toString(Qt::ISODate);
+
+    return timestamp;
+}
+
+bool shouldImportLegacyTimestamp(const QString &existingTimestamp,
+                                 const QString &legacyTimestamp)
+{
+    if (existingTimestamp.isEmpty())
+        return true;
+    if (legacyTimestamp.isEmpty())
+        return false;
+
+    return normalizedTimestampForComparison(legacyTimestamp)
+        >= normalizedTimestampForComparison(existingTimestamp);
+}
+
+QString legacyDatabasePath()
+{
+    const QString legacyDirectory =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (legacyDirectory.isEmpty())
+        return {};
+
+    return legacyDirectory + QStringLiteral("/playback.sqlite");
+}
+
+struct LegacySkipRecord {
+    SkipRange range;
+    QString updatedAt;
+};
+
+struct LegacySkipFileData {
+    QVector<LegacySkipRecord> records;
+    QString latestUpdatedAt;
+};
 
 }
 
@@ -97,6 +142,216 @@ bool AppDatabase::initialize()
     }
 
     return ensureDefaultConfiguration();
+}
+
+AppDatabase::LegacyMergeResult AppDatabase::mergeLegacyDatabaseOnce()
+{
+    LegacyMergeResult result;
+
+    if (loadConfigString(AppConfig::legacyPlaybackMergeCheckedKey()) == QStringLiteral("true"))
+        return result;
+
+    result.legacyDatabasePath = legacyDatabasePath();
+    if (result.legacyDatabasePath.isEmpty()
+        || QDir::cleanPath(result.legacyDatabasePath) == QDir::cleanPath(AppPaths::databasePath())
+        || !QFileInfo::exists(result.legacyDatabasePath)) {
+        if (!markLegacyMergeChecked()) {
+            result.status = LegacyMergeResult::Status::Failed;
+            result.errorMessage =
+                QStringLiteral("Der Migrationsstatus konnte nicht gespeichert werden.");
+            return result;
+        }
+
+        result.status = LegacyMergeResult::Status::NoLegacyDatabase;
+        return result;
+    }
+
+    const QString legacyConnectionName = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QSqlDatabase legacyDb = QSqlDatabase::addDatabase(QStringLiteral("QSQLITE"), legacyConnectionName);
+    legacyDb.setConnectOptions(QStringLiteral("QSQLITE_OPEN_READONLY"));
+    legacyDb.setDatabaseName(result.legacyDatabasePath);
+
+    auto finalizeFailure = [this, &result](const QString &message) {
+        result.status = LegacyMergeResult::Status::Failed;
+        result.errorMessage = message;
+        markLegacyMergeChecked();
+    };
+
+    if (!legacyDb.open()) {
+        finalizeFailure(legacyDb.lastError().text());
+        legacyDb = QSqlDatabase();
+        QSqlDatabase::removeDatabase(legacyConnectionName);
+        return result;
+    }
+
+    if (!m_db.transaction()) {
+        finalizeFailure(m_db.lastError().text());
+        legacyDb.close();
+        legacyDb = QSqlDatabase();
+        QSqlDatabase::removeDatabase(legacyConnectionName);
+        return result;
+    }
+
+    QSqlQuery legacyPlaybackQuery(legacyDb);
+    if (!legacyPlaybackQuery.exec(
+            QStringLiteral("SELECT file_path, last_position, duration, audio_delay, updated_at "
+                           "FROM playback_state"))) {
+        m_db.rollback();
+        finalizeFailure(legacyPlaybackQuery.lastError().text());
+        legacyDb.close();
+        legacyDb = QSqlDatabase();
+        QSqlDatabase::removeDatabase(legacyConnectionName);
+        return result;
+    }
+
+    QSqlQuery existingPlaybackQuery(m_db);
+    existingPlaybackQuery.prepare(
+        QStringLiteral("SELECT updated_at FROM playback_state WHERE file_path = ?"));
+
+    while (legacyPlaybackQuery.next()) {
+        const QString filePath = legacyPlaybackQuery.value(0).toString();
+        const double position = legacyPlaybackQuery.value(1).toDouble();
+        const double duration = legacyPlaybackQuery.value(2).toDouble();
+        const double audioDelay = legacyPlaybackQuery.value(3).toDouble();
+        const QString updatedAt = legacyPlaybackQuery.value(4).toString();
+
+        existingPlaybackQuery.bindValue(0, filePath);
+        QString existingUpdatedAt;
+        if (!existingPlaybackQuery.exec()) {
+            m_db.rollback();
+            finalizeFailure(existingPlaybackQuery.lastError().text());
+            legacyDb.close();
+            legacyDb = QSqlDatabase();
+            QSqlDatabase::removeDatabase(legacyConnectionName);
+            return result;
+        }
+
+        if (existingPlaybackQuery.next())
+            existingUpdatedAt = existingPlaybackQuery.value(0).toString();
+        existingPlaybackQuery.finish();
+
+        if (!shouldImportLegacyTimestamp(existingUpdatedAt, updatedAt))
+            continue;
+
+        if (!savePositionRecord(filePath,
+                                position,
+                                duration,
+                                audioDelay,
+                                updatedAt.isEmpty() ? currentUtcTimestamp() : updatedAt)) {
+            m_db.rollback();
+            finalizeFailure(m_db.lastError().text());
+            legacyDb.close();
+            legacyDb = QSqlDatabase();
+            QSqlDatabase::removeDatabase(legacyConnectionName);
+            return result;
+        }
+
+        ++result.mergedPlaybackRows;
+    }
+
+    QSqlQuery legacySkipQuery(legacyDb);
+    if (!legacySkipQuery.exec(
+            QStringLiteral("SELECT file_path, start_pos, end_pos, updated_at "
+                           "FROM skip_ranges ORDER BY file_path ASC, start_pos ASC"))) {
+        m_db.rollback();
+        finalizeFailure(legacySkipQuery.lastError().text());
+        legacyDb.close();
+        legacyDb = QSqlDatabase();
+        QSqlDatabase::removeDatabase(legacyConnectionName);
+        return result;
+    }
+
+    QHash<QString, LegacySkipFileData> legacySkipFiles;
+    while (legacySkipQuery.next()) {
+        const QString filePath = legacySkipQuery.value(0).toString();
+        const double start = legacySkipQuery.value(1).toDouble();
+        const double end = legacySkipQuery.value(2).toDouble();
+        const QString updatedAt = legacySkipQuery.value(3).toString();
+
+        if (filePath.isEmpty() || end <= start)
+            continue;
+
+        LegacySkipFileData &fileData = legacySkipFiles[filePath];
+        fileData.records.append({ { start, end }, updatedAt });
+        if (fileData.latestUpdatedAt.isEmpty()
+            || shouldImportLegacyTimestamp(fileData.latestUpdatedAt, updatedAt)) {
+            fileData.latestUpdatedAt = updatedAt;
+        }
+    }
+
+    QSqlQuery existingSkipQuery(m_db);
+    existingSkipQuery.prepare(
+        QStringLiteral("SELECT MAX(updated_at) FROM skip_ranges WHERE file_path = ?"));
+
+    for (auto it = legacySkipFiles.cbegin(); it != legacySkipFiles.cend(); ++it) {
+        const QString &filePath = it.key();
+        const LegacySkipFileData &fileData = it.value();
+
+        existingSkipQuery.bindValue(0, filePath);
+        QString existingUpdatedAt;
+        if (!existingSkipQuery.exec()) {
+            m_db.rollback();
+            finalizeFailure(existingSkipQuery.lastError().text());
+            legacyDb.close();
+            legacyDb = QSqlDatabase();
+            QSqlDatabase::removeDatabase(legacyConnectionName);
+            return result;
+        }
+
+        if (existingSkipQuery.next())
+            existingUpdatedAt = existingSkipQuery.value(0).toString();
+        existingSkipQuery.finish();
+
+        if (!shouldImportLegacyTimestamp(existingUpdatedAt, fileData.latestUpdatedAt))
+            continue;
+
+        QVector<SkipRange> ranges;
+        QVector<QString> updatedAtValues;
+        ranges.reserve(fileData.records.size());
+        updatedAtValues.reserve(fileData.records.size());
+        for (const LegacySkipRecord &record : fileData.records) {
+            ranges.append(record.range);
+            updatedAtValues.append(record.updatedAt.isEmpty()
+                                       ? currentUtcTimestamp()
+                                       : record.updatedAt);
+        }
+
+        if (!replaceSkipRangesRecords(filePath, ranges, updatedAtValues, false)) {
+            m_db.rollback();
+            finalizeFailure(m_db.lastError().text());
+            legacyDb.close();
+            legacyDb = QSqlDatabase();
+            QSqlDatabase::removeDatabase(legacyConnectionName);
+            return result;
+        }
+
+        ++result.mergedSkipFiles;
+    }
+
+    if (!markLegacyMergeChecked()) {
+        m_db.rollback();
+        finalizeFailure(QStringLiteral("Der Migrationsstatus konnte nicht gespeichert werden."));
+        legacyDb.close();
+        legacyDb = QSqlDatabase();
+        QSqlDatabase::removeDatabase(legacyConnectionName);
+        return result;
+    }
+
+    if (!m_db.commit()) {
+        m_db.rollback();
+        finalizeFailure(m_db.lastError().text());
+        legacyDb.close();
+        legacyDb = QSqlDatabase();
+        QSqlDatabase::removeDatabase(legacyConnectionName);
+        return result;
+    }
+
+    legacyDb.close();
+    legacyDb = QSqlDatabase();
+    QSqlDatabase::removeDatabase(legacyConnectionName);
+
+    result.status = LegacyMergeResult::Status::Merged;
+    return result;
 }
 
 bool AppDatabase::ensureDefaultConfiguration()
@@ -247,6 +502,19 @@ bool AppDatabase::savePosition(const QString &filePath,
                                double duration,
                                double audioDelay)
 {
+    return savePositionRecord(filePath,
+                              position,
+                              duration,
+                              audioDelay,
+                              currentUtcTimestamp());
+}
+
+bool AppDatabase::savePositionRecord(const QString &filePath,
+                                     double position,
+                                     double duration,
+                                     double audioDelay,
+                                     const QString &updatedAt)
+{
     QSqlQuery query(m_db);
     query.prepare(
         QStringLiteral("INSERT INTO playback_state(file_path, last_position, duration, audio_delay, updated_at) "
@@ -260,20 +528,38 @@ bool AppDatabase::savePosition(const QString &filePath,
     query.addBindValue(position);
     query.addBindValue(duration);
     query.addBindValue(audioDelay);
-    query.addBindValue(currentUtcTimestamp());
+    query.addBindValue(updatedAt);
     return query.exec();
 }
 
 bool AppDatabase::saveSkipRanges(const QString &filePath, const QVector<SkipRange> &ranges)
 {
-    if (!m_db.transaction())
+    QVector<QString> updatedAtValues;
+    updatedAtValues.reserve(ranges.size());
+    const QString updatedAt = currentUtcTimestamp();
+    for (int i = 0; i < ranges.size(); ++i)
+        updatedAtValues.append(updatedAt);
+
+    return replaceSkipRangesRecords(filePath, ranges, updatedAtValues);
+}
+
+bool AppDatabase::replaceSkipRangesRecords(const QString &filePath,
+                                           const QVector<SkipRange> &ranges,
+                                           const QVector<QString> &updatedAtValues,
+                                           bool manageTransaction)
+{
+    if (ranges.size() != updatedAtValues.size())
+        return false;
+
+    if (manageTransaction && !m_db.transaction())
         return false;
 
     QSqlQuery deleteQuery(m_db);
     deleteQuery.prepare(QStringLiteral("DELETE FROM skip_ranges WHERE file_path = ?"));
     deleteQuery.addBindValue(filePath);
     if (!deleteQuery.exec()) {
-        m_db.rollback();
+        if (manageTransaction)
+            m_db.rollback();
         return false;
     }
 
@@ -283,18 +569,22 @@ bool AppDatabase::saveSkipRanges(const QString &filePath, const QVector<SkipRang
             QStringLiteral("INSERT INTO skip_ranges(file_path, start_pos, end_pos, updated_at) "
                            "VALUES(?, ?, ?, ?)"));
 
-        const QString updatedAt = currentUtcTimestamp();
-        for (const SkipRange &range : ranges) {
+        for (int i = 0; i < ranges.size(); ++i) {
+            const SkipRange &range = ranges.at(i);
             insertQuery.addBindValue(filePath);
             insertQuery.addBindValue(range.start);
             insertQuery.addBindValue(range.end);
-            insertQuery.addBindValue(updatedAt);
+            insertQuery.addBindValue(updatedAtValues.at(i));
             if (!insertQuery.exec()) {
-                m_db.rollback();
+                if (manageTransaction)
+                    m_db.rollback();
                 return false;
             }
         }
     }
+
+    if (!manageTransaction)
+        return true;
 
     return m_db.commit();
 }
@@ -326,6 +616,12 @@ bool AppDatabase::saveConfigValue(const QString &key,
     query.addBindValue(AppConfig::valueTypeName(valueType));
     query.addBindValue(currentUtcTimestamp());
     return query.exec();
+}
+
+bool AppDatabase::markLegacyMergeChecked()
+{
+    return saveConfigString(AppConfig::legacyPlaybackMergeCheckedKey(),
+                            QStringLiteral("true"));
 }
 
 QString AppDatabase::serializeStringList(const QStringList &values)
