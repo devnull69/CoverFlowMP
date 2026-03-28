@@ -1,4 +1,4 @@
-coverflowmp (2.0.0) UNRELEASED; urgency=medium
+coverflowmp (2.0.1) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -29,5 +29,6 @@ coverflowmp (2.0.0) UNRELEASED; urgency=medium
   * Add flexible app configuration storage in SQLite with default
     browser background and folder list
   * Configurator added
+  * Import/Merge old DB
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Fri, 27 Mar 2026 12:26:07 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Sat, 28 Mar 2026 23:48:07 +0100

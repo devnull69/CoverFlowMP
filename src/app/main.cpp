@@ -126,14 +126,14 @@ int main(int argc, char *argv[])
                                  QStringLiteral("Optionaler Root-Ordner fuer die Videobibliothek."));
     parser.process(app);
 
-    const QStringList configuredFolders = database.loadConfigStringList(
+    const QJsonObject configuredFolders = database.loadConfigObject(
         AppConfig::libraryFoldersKey(),
-        AppConfig::defaultLibraryFolders());
-    const QString configuredDefaultFolder = configuredFolders.isEmpty()
-        ? QString()
-        : normalizedFolderPath(configuredFolders.first());
+        AppConfig::defaultLibraryFoldersObject());
+    const QString configuredDefaultFolder = normalizedFolderPath(
+        configuredFolders.value(QStringLiteral("Videos")).toString());
     const QString fallbackVideoFolder =
-        normalizedFolderPath(AppConfig::defaultLibraryFolders().value(0));
+        normalizedFolderPath(
+            AppConfig::defaultLibraryFoldersObject().value(QStringLiteral("Videos")).toString());
     QString videoFolder = isUsableFolder(configuredDefaultFolder)
         ? configuredDefaultFolder
         : fallbackVideoFolder;

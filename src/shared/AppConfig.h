@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QJsonObject>
 #include <QString>
 #include <QStringList>
 
@@ -15,6 +16,7 @@ QString libraryFoldersKey();
 QString legacyPlaybackMergeCheckedKey();
 
 QString defaultBrowserBackground();
+QJsonObject defaultLibraryFoldersObject();
 QStringList defaultLibraryFolders();
 
 QString valueTypeName(ValueType type);

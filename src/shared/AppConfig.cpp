@@ -22,6 +22,13 @@ QString defaultBrowserBackground()
     return QStringLiteral("default");
 }
 
+QJsonObject defaultLibraryFoldersObject()
+{
+    QJsonObject folders;
+    folders.insert(QStringLiteral("Videos"), QStringLiteral("~/Videos"));
+    return folders;
+}
+
 QStringList defaultLibraryFolders()
 {
     return { QStringLiteral("~/Videos") };
