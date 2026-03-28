@@ -366,8 +366,8 @@ bool AppDatabase::ensureDefaultConfiguration()
     }
 
     if (!loadConfigRecord(AppConfig::libraryFoldersKey()).found
-        && !saveConfigObject(AppConfig::libraryFoldersKey(),
-                             AppConfig::defaultLibraryFoldersObject())) {
+        && !saveConfigArray(AppConfig::libraryFoldersKey(),
+                            AppConfig::defaultLibraryFoldersArray())) {
         return false;
     }
 
@@ -384,36 +384,76 @@ bool AppDatabase::migrateLegacyConfiguration()
         return true;
 
     const QJsonDocument document = QJsonDocument::fromJson(libraryFolders.value.toUtf8());
-    if (document.isObject())
-        return true;
+    if (document.isArray()) {
+        const QJsonArray array = document.array();
+        bool containsObjectEntries = false;
+        for (const QJsonValue &entry : array) {
+            if (!entry.isObject())
+                continue;
 
-    if (!document.isArray())
-        return true;
-
-    const QJsonArray array = document.array();
-    QJsonObject migratedObject;
-    int fallbackIndex = 2;
-
-    for (const QJsonValue &entry : array) {
-        if (!entry.isString())
-            continue;
-
-        const QString folderPath = entry.toString().trimmed();
-        if (folderPath.isEmpty())
-            continue;
-
-        if (!migratedObject.contains(QStringLiteral("Videos"))) {
-            migratedObject.insert(QStringLiteral("Videos"), folderPath);
-        } else {
-            migratedObject.insert(QStringLiteral("Folder%1").arg(fallbackIndex), folderPath);
-            ++fallbackIndex;
+            const QJsonObject object = entry.toObject();
+            if (object.value(QStringLiteral("name")).isString()
+                && object.value(QStringLiteral("path")).isString()) {
+                containsObjectEntries = true;
+                break;
+            }
         }
+
+        if (containsObjectEntries)
+            return true;
+
+        QJsonArray migratedArray;
+        int fallbackIndex = 2;
+        for (const QJsonValue &entry : array) {
+            if (!entry.isString())
+                continue;
+
+            const QString folderPath = entry.toString().trimmed();
+            if (folderPath.isEmpty())
+                continue;
+
+            QJsonObject folderObject;
+            if (migratedArray.isEmpty()) {
+                folderObject.insert(QStringLiteral("name"), QStringLiteral("Videos"));
+            } else {
+                folderObject.insert(QStringLiteral("name"),
+                                    QStringLiteral("Folder%1").arg(fallbackIndex));
+                ++fallbackIndex;
+            }
+            folderObject.insert(QStringLiteral("path"), folderPath);
+            migratedArray.append(folderObject);
+        }
+
+        if (migratedArray.isEmpty())
+            migratedArray = AppConfig::defaultLibraryFoldersArray();
+
+        return saveConfigArray(AppConfig::libraryFoldersKey(), migratedArray);
     }
 
-    if (migratedObject.isEmpty())
-        migratedObject = AppConfig::defaultLibraryFoldersObject();
+    if (!document.isObject())
+        return true;
 
-    return saveConfigObject(AppConfig::libraryFoldersKey(), migratedObject);
+    const QJsonObject object = document.object();
+    QJsonArray migratedArray;
+    for (auto it = object.begin(); it != object.end(); ++it) {
+        if (!it.value().isString())
+            continue;
+
+        const QString name = it.key().trimmed();
+        const QString folderPath = it.value().toString().trimmed();
+        if (name.isEmpty() || folderPath.isEmpty())
+            continue;
+
+        QJsonObject folderObject;
+        folderObject.insert(QStringLiteral("name"), name);
+        folderObject.insert(QStringLiteral("path"), folderPath);
+        migratedArray.append(folderObject);
+    }
+
+    if (migratedArray.isEmpty())
+        migratedArray = AppConfig::defaultLibraryFoldersArray();
+
+    return saveConfigArray(AppConfig::libraryFoldersKey(), migratedArray);
 }
 
 double AppDatabase::loadPosition(const QString &filePath) const
@@ -518,6 +558,22 @@ QString AppDatabase::loadConfigString(const QString &key, const QString &fallbac
     return record.value;
 }
 
+QJsonArray AppDatabase::loadConfigArray(const QString &key, const QJsonArray &fallback) const
+{
+    const ConfigRecord record = loadConfigRecord(key);
+    if (!record.found)
+        return fallback;
+
+    if (record.valueType != AppConfig::valueTypeName(AppConfig::ValueType::Json))
+        return fallback;
+
+    const QJsonDocument document = QJsonDocument::fromJson(record.value.toUtf8());
+    if (!document.isArray())
+        return fallback;
+
+    return document.array();
+}
+
 QJsonObject AppDatabase::loadConfigObject(const QString &key, const QJsonObject &fallback) const
 {
     const ConfigRecord record = loadConfigRecord(key);
@@ -604,6 +660,11 @@ bool AppDatabase::saveSkipRanges(const QString &filePath, const QVector<SkipRang
     return replaceSkipRangesRecords(filePath, ranges, updatedAtValues);
 }
 
+bool AppDatabase::saveConfigArray(const QString &key, const QJsonArray &value)
+{
+    return saveConfigValue(key, serializeJsonArray(value), AppConfig::ValueType::Json);
+}
+
 bool AppDatabase::saveConfigObject(const QString &key, const QJsonObject &value)
 {
     return saveConfigValue(key, serializeJsonObject(value), AppConfig::ValueType::Json);
@@ -688,6 +749,11 @@ bool AppDatabase::markLegacyMergeChecked()
 {
     return saveConfigString(AppConfig::legacyPlaybackMergeCheckedKey(),
                             QStringLiteral("true"));
+}
+
+QString AppDatabase::serializeJsonArray(const QJsonArray &values)
+{
+    return QString::fromUtf8(QJsonDocument(values).toJson(QJsonDocument::Compact));
 }
 
 QString AppDatabase::serializeJsonObject(const QJsonObject &values)

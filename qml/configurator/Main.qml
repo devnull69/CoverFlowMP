@@ -182,14 +182,164 @@ ApplicationWindow {
                             }
 
                             Label {
-                                text: "Dieser Bereich ist fuer den ersten Schritt vorbereitet und folgt als naechstes."
+                                text: "Verwalte hier Deine Video-Ordner. Der erste Eintrag wird beim App-Start als Standard-Ordner verwendet"
                                 wrapMode: Text.WordWrap
                                 color: "#4D6277"
                                 Layout.fillWidth: true
                             }
 
-                            Item {
+                            RowLayout {
+                                Layout.fillWidth: true
                                 Layout.fillHeight: true
+                                spacing: 16
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.minimumHeight: 280
+                                    radius: 14
+                                    color: "#F6F9FC"
+                                    border.color: "#CAD5E0"
+                                    border.width: 1
+
+                                    Column {
+                                        anchors.fill: parent
+                                        anchors.margins: 12
+                                        spacing: 8
+
+                                        Rectangle {
+                                            width: parent.width
+                                            radius: 10
+                                            color: "#E3EBF3"
+                                            border.color: "#CAD5E0"
+                                            border.width: 1
+                                            implicitHeight: 44
+
+                                            RowLayout {
+                                                anchors.fill: parent
+                                                anchors.leftMargin: 14
+                                                anchors.rightMargin: 14
+                                                spacing: 12
+
+                                                Label {
+                                                    Layout.preferredWidth: 180
+                                                    text: "Name"
+                                                    font.bold: true
+                                                    color: "#17324D"
+                                                }
+
+                                                Label {
+                                                    Layout.fillWidth: true
+                                                    text: "Ordnerpfad"
+                                                    font.bold: true
+                                                    color: "#17324D"
+                                                }
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            width: parent.width
+                                            height: parent.height - 52
+                                            radius: 10
+                                            color: "#FCFDFE"
+                                            border.color: "#D7E0E8"
+                                            border.width: 1
+
+                                            ScrollView {
+                                                anchors.fill: parent
+                                                clip: true
+
+                                                ListView {
+                                                    id: folderListView
+                                                    anchors.fill: parent
+                                                    model: configController.libraryFolders
+                                                    spacing: 4
+                                                    clip: true
+                                                    currentIndex: configController.selectedFolderIndex
+
+                                                    delegate: Rectangle {
+                                                        required property int index
+                                                        required property var modelData
+                                                        width: folderListView.width
+                                                        height: 48
+                                                        radius: 8
+                                                        color: ListView.isCurrentItem ? "#D9ECFF" : "transparent"
+                                                        border.width: 1
+                                                        border.color: ListView.isCurrentItem ? "#7CAED8" : "transparent"
+
+                                                        RowLayout {
+                                                            anchors.fill: parent
+                                                            anchors.leftMargin: 14
+                                                            anchors.rightMargin: 14
+                                                            spacing: 12
+
+                                                            Label {
+                                                                Layout.preferredWidth: 180
+                                                                text: modelData.name
+                                                                color: "#17324D"
+                                                                elide: Text.ElideRight
+                                                            }
+
+                                                            Label {
+                                                                Layout.fillWidth: true
+                                                                text: modelData.path
+                                                                color: "#3D546A"
+                                                                elide: Text.ElideRight
+                                                            }
+                                                        }
+
+                                                        MouseArea {
+                                                            anchors.fill: parent
+                                                            onClicked: configController.selectedFolderIndex = index
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Item {
+                                    Layout.preferredWidth: 120
+                                    Layout.maximumWidth: 120
+                                    Layout.minimumWidth: 120
+                                    Layout.alignment: Qt.AlignTop
+                                    Layout.fillHeight: true
+
+                                    Column {
+                                        anchors.top: parent.top
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        spacing: 10
+
+                                        Button {
+                                            width: parent.width
+                                            text: "Neu"
+                                            onClicked: configController.addFolderEntry()
+                                        }
+
+                                        Button {
+                                            width: parent.width
+                                            text: "Loeschen"
+                                            enabled: configController.canDeleteFolderEntry
+                                            onClicked: configController.removeSelectedFolderEntry()
+                                        }
+
+                                        Button {
+                                            width: parent.width
+                                            text: "↑"
+                                            enabled: configController.canMoveFolderEntryUp
+                                            onClicked: configController.moveSelectedFolderEntryUp()
+                                        }
+
+                                        Button {
+                                            width: parent.width
+                                            text: "↓"
+                                            enabled: configController.canMoveFolderEntryDown
+                                            onClicked: configController.moveSelectedFolderEntryDown()
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

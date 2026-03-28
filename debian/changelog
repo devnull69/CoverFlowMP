@@ -1,4 +1,4 @@
-coverflowmp (2.0.1) UNRELEASED; urgency=medium
+coverflowmp (2.0.2) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -30,5 +30,6 @@ coverflowmp (2.0.1) UNRELEASED; urgency=medium
     browser background and folder list
   * Configurator added
   * Import/Merge old DB
+  * Folder config type changed
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Sat, 28 Mar 2026 23:48:07 +0100
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Sun, 29 Mar 2026 00:02:27 +0100

@@ -2,6 +2,8 @@
 #include <QCommandLineParser>
 #include <QDir>
 #include <QIcon>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QMessageBox>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -126,17 +128,33 @@ int main(int argc, char *argv[])
                                  QStringLiteral("Optionaler Root-Ordner fuer die Videobibliothek."));
     parser.process(app);
 
-    const QJsonObject configuredFolders = database.loadConfigObject(
+    const QJsonArray configuredFolders = database.loadConfigArray(
         AppConfig::libraryFoldersKey(),
-        AppConfig::defaultLibraryFoldersObject());
-    const QString configuredDefaultFolder = normalizedFolderPath(
-        configuredFolders.value(QStringLiteral("Videos")).toString());
+        AppConfig::defaultLibraryFoldersArray());
+    QString videoFolder;
+    for (const QJsonValue &entry : configuredFolders) {
+        if (!entry.isObject())
+            continue;
+
+        const QString candidateFolder = normalizedFolderPath(
+            entry.toObject().value(QStringLiteral("path")).toString());
+        if (isUsableFolder(candidateFolder)) {
+            videoFolder = candidateFolder;
+            break;
+        }
+    }
+
+    QString fallbackFolderValue = QStringLiteral("~/Videos");
+    const QJsonArray fallbackFolders = AppConfig::defaultLibraryFoldersArray();
+    if (!fallbackFolders.isEmpty() && fallbackFolders.first().isObject()) {
+        fallbackFolderValue = fallbackFolders.first().toObject()
+                                  .value(QStringLiteral("path"))
+                                  .toString(fallbackFolderValue);
+    }
     const QString fallbackVideoFolder =
-        normalizedFolderPath(
-            AppConfig::defaultLibraryFoldersObject().value(QStringLiteral("Videos")).toString());
-    QString videoFolder = isUsableFolder(configuredDefaultFolder)
-        ? configuredDefaultFolder
-        : fallbackVideoFolder;
+        normalizedFolderPath(fallbackFolderValue);
+    if (!isUsableFolder(videoFolder))
+        videoFolder = fallbackVideoFolder;
 
     const QStringList positionalArgs = parser.positionalArguments();
     if (!positionalArgs.isEmpty()) {

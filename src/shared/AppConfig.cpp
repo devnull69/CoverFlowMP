@@ -1,5 +1,7 @@
 #include "AppConfig.h"
 
+#include <QJsonObject>
+
 namespace AppConfig {
 
 QString browserBackgroundKey()
@@ -22,10 +24,13 @@ QString defaultBrowserBackground()
     return QStringLiteral("default");
 }
 
-QJsonObject defaultLibraryFoldersObject()
+QJsonArray defaultLibraryFoldersArray()
 {
-    QJsonObject folders;
-    folders.insert(QStringLiteral("Videos"), QStringLiteral("~/Videos"));
+    QJsonArray folders;
+    QJsonObject folder;
+    folder.insert(QStringLiteral("name"), QStringLiteral("Videos"));
+    folder.insert(QStringLiteral("path"), QStringLiteral("~/Videos"));
+    folders.append(folder);
     return folders;
 }
 

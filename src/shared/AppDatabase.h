@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QStringList>
 #include <QSqlDatabase>
@@ -43,6 +44,8 @@ public:
 
     QString loadConfigString(const QString &key,
                              const QString &fallback = QString()) const;
+    QJsonArray loadConfigArray(const QString &key,
+                               const QJsonArray &fallback = QJsonArray()) const;
     QJsonObject loadConfigObject(const QString &key,
                                  const QJsonObject &fallback = QJsonObject()) const;
     QStringList loadConfigStringList(const QString &key,
@@ -53,6 +56,7 @@ public:
                       double duration = 0.0,
                       double audioDelay = 0.0);
     bool saveSkipRanges(const QString &filePath, const QVector<SkipRange> &ranges);
+    bool saveConfigArray(const QString &key, const QJsonArray &value);
     bool saveConfigObject(const QString &key, const QJsonObject &value);
     bool saveConfigString(const QString &key, const QString &value);
     bool saveConfigStringList(const QString &key, const QStringList &values);
@@ -85,6 +89,7 @@ private:
                                   const QVector<QString> &updatedAtValues,
                                   bool manageTransaction = true);
     bool markLegacyMergeChecked();
+    static QString serializeJsonArray(const QJsonArray &values);
     static QString serializeJsonObject(const QJsonObject &values);
     static QString serializeStringList(const QStringList &values);
 
