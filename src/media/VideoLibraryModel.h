@@ -18,7 +18,8 @@ public:
         ResumePositionRole,
         IsDemoRole,
         IsFolderRole,
-        IsParentFolderRole
+        IsParentFolderRole,
+        IsVirtualRootEntryRole
     };
 
     explicit VideoLibraryModel(QObject *parent = nullptr);

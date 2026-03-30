@@ -9,6 +9,8 @@ Item {
     property int deleteChoiceIndex: 1 // 0 = JA, 1 = NEIN (default)
     property bool resetDialogVisible: false
     property int resetChoiceIndex: 2 // 0 = ALLE, 1 = NUR AKTUELLER ORDNER, 2 = ABBRECHEN
+    property bool actionDialogVisible: false
+    property int actionChoiceIndex: 0 // 0 = BEENDEN, 1 = ZURUECK
     property bool messageDialogVisible: false
     property string messageDialogText: ""
     property date currentDateTime: new Date()
@@ -73,9 +75,10 @@ Item {
     }
 
     Keys.onEscapePressed: function(event) {
-        if (root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible) {
             root.deleteDialogVisible = false
             root.resetDialogVisible = false
+            root.actionDialogVisible = false
             root.messageDialogVisible = false
             root.messageDialogText = ""
             appController.clearPlayerMessage()
@@ -88,7 +91,7 @@ Item {
     }
 
     Keys.onLeftPressed: function(event) {
-        if (root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible) {
             event.accepted = true
             return
         }
@@ -97,7 +100,7 @@ Item {
     }
 
     Keys.onRightPressed: function(event) {
-        if (root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible) {
             event.accepted = true
             return
         }
@@ -119,6 +122,13 @@ Item {
             else if (root.resetChoiceIndex === 1)
                 appController.resetCurrentFolderResumeDatabase()
             root.resetDialogVisible = false
+            event.accepted = true
+            return
+        }
+        if (root.actionDialogVisible) {
+            if (root.actionChoiceIndex === 0)
+                appController.quitApplication()
+            root.actionDialogVisible = false
             event.accepted = true
             return
         }
@@ -150,6 +160,13 @@ Item {
             event.accepted = true
             return
         }
+        if (root.actionDialogVisible) {
+            if (root.actionChoiceIndex === 0)
+                appController.quitApplication()
+            root.actionDialogVisible = false
+            event.accepted = true
+            return
+        }
         if (root.messageDialogVisible) {
             root.messageDialogText = ""
             appController.clearPlayerMessage()
@@ -166,6 +183,11 @@ Item {
             event.accepted = true
             return
         }
+        if (root.actionDialogVisible) {
+            root.actionChoiceIndex = 0
+            event.accepted = true
+            return
+        }
         if (root.deleteDialogVisible) {
             root.deleteChoiceIndex = 0
             event.accepted = true
@@ -176,10 +198,21 @@ Item {
             event.accepted = true
             return
         }
+        if (appController.canOpenBrowserActionDialog()) {
+            root.actionChoiceIndex = 0
+            root.actionDialogVisible = true
+            event.accepted = true
+            return
+        }
     }
 
     Keys.onDownPressed: function(event) {
         if (root.messageDialogVisible) {
+            event.accepted = true
+            return
+        }
+        if (root.actionDialogVisible) {
+            root.actionChoiceIndex = 1
             event.accepted = true
             return
         }
@@ -199,6 +232,7 @@ Item {
         if (event.key === Qt.Key_0
                 && !root.deleteDialogVisible
                 && !root.resetDialogVisible
+                && !root.actionDialogVisible
                 && appController.canDeleteCurrentVideo()) {
             root.deleteChoiceIndex = 1
             root.deleteDialogVisible = true
@@ -209,6 +243,7 @@ Item {
         if (event.key === Qt.Key_F
                 && !root.deleteDialogVisible
                 && !root.resetDialogVisible
+                && !root.actionDialogVisible
                 && !root.messageDialogVisible) {
             root.messageDialogText = ""
             appController.toggleFastMode()
@@ -217,7 +252,7 @@ Item {
             return
         }
 
-        if (event.key === Qt.Key_R && !root.deleteDialogVisible && !root.resetDialogVisible) {
+        if (event.key === Qt.Key_R && !root.deleteDialogVisible && !root.resetDialogVisible && !root.actionDialogVisible) {
             root.resetChoiceIndex = 2
             root.resetDialogVisible = true
             event.accepted = true
@@ -227,6 +262,7 @@ Item {
         if (event.key === Qt.Key_V
                 && !root.deleteDialogVisible
                 && !root.resetDialogVisible
+                && !root.actionDialogVisible
                 && !root.messageDialogVisible) {
             root.messageDialogText = "Version " + appController.appVersion
             root.messageDialogVisible = true
@@ -234,9 +270,10 @@ Item {
             return
         }
 
-        if ((root.deleteDialogVisible || root.resetDialogVisible || root.messageDialogVisible) && event.key === Qt.Key_B) {
+        if ((root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible) && event.key === Qt.Key_B) {
             root.deleteDialogVisible = false
             root.resetDialogVisible = false
+            root.actionDialogVisible = false
             root.messageDialogVisible = false
             root.messageDialogText = ""
             appController.clearPlayerMessage()
@@ -493,6 +530,75 @@ Item {
                     color: "white"
                     font.bold: true
                     font.pixelSize: Math.max(22, resetDialog.height * 0.065)
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        id: actionDialog
+        visible: root.actionDialogVisible
+        anchors.centerIn: parent
+        width: parent.width * 0.46
+        height: parent.height * 0.46
+        radius: 14
+        color: "#D91A1A1A"
+        border.width: 1
+        border.color: "#808080"
+        clip: true
+
+        Column {
+            id: actionDialogContent
+            anchors.fill: parent
+            anchors.margins: actionDialog.height * 0.08
+            spacing: actionDialog.height * 0.06
+
+            Text {
+                width: actionDialogContent.width
+                horizontalAlignment: Text.AlignHCenter
+                color: "white"
+                wrapMode: Text.WordWrap
+                font.pixelSize: Math.max(20, actionDialog.height * 0.09)
+                font.bold: true
+                text: "Welche Aktion moechten Sie durchfuehren?"
+            }
+
+            Item {
+                width: actionDialogContent.width
+                height: actionDialog.height * 0.03
+            }
+
+            Rectangle {
+                width: actionDialogContent.width
+                height: Math.max(56, actionDialog.height * 0.20)
+                radius: 8
+                color: root.actionChoiceIndex === 0 ? "#2AA84A" : "#303030"
+                border.width: 1
+                border.color: root.actionChoiceIndex === 0 ? "#7CF1A3" : "#666666"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "BEENDEN"
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: Math.max(22, actionDialog.height * 0.09)
+                }
+            }
+
+            Rectangle {
+                width: actionDialogContent.width
+                height: Math.max(56, actionDialog.height * 0.20)
+                radius: 8
+                color: root.actionChoiceIndex === 1 ? "#2AA84A" : "#303030"
+                border.width: 1
+                border.color: root.actionChoiceIndex === 1 ? "#7CF1A3" : "#666666"
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "ZURUECK"
+                    color: "white"
+                    font.bold: true
+                    font.pixelSize: Math.max(22, actionDialog.height * 0.09)
                 }
             }
         }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QJsonArray>
 #include <QString>
 #include <QUrl>
 #include <QThreadPool>
@@ -49,6 +50,8 @@ public:
     bool skipImportPromptVisible() const;
     bool canNavigateUp() const;
 
+    void setConfiguredLibraryFolders(const QJsonArray &folders,
+                                     bool enableVirtualRootNavigation = true);
     Q_INVOKABLE void initialize(const QString &videoFolder);
     Q_INVOKABLE void playSelected(int index);
     Q_INVOKABLE void decideResumePlayback(bool continueFromSavedPosition);
@@ -66,6 +69,8 @@ public:
     Q_INVOKABLE void backToBrowser();
     Q_INVOKABLE void setCurrentIndex(int index);
     Q_INVOKABLE void navigateUpOrQuit();
+    Q_INVOKABLE bool canOpenBrowserActionDialog() const;
+    Q_INVOKABLE void quitApplication();
 
 signals:
     void playerVisibleChanged();
@@ -78,6 +83,11 @@ signals:
     void skipImportPromptVisibleChanged();
 
 private:
+    struct ConfiguredFolderEntry {
+        QString name;
+        QString path;
+    };
+
     double browserDurationForFile(const QString &filePath, double storedDuration) const;
     void refreshBrowserDurations();
     void queueMissingDurations(const QVector<VideoItem> &items, quint64 generation);
@@ -89,6 +99,13 @@ private:
     bool shouldPromptForSkipImport(const QString &filePath) const;
     void setSkipImportPromptVisible(bool visible);
     void queueMissingThumbnails(const QVector<VideoItem> &items, quint64 generation);
+    QString resolveRootFolderForPath(const QString &folderPath) const;
+    bool canShowConfiguredFoldersRoot() const;
+    bool isAtConfiguredFolderRoot() const;
+    int indexOfConfiguredFolder(const QString &folderPath) const;
+    QVector<VideoItem> configuredFolderRootItems() const;
+    void showConfiguredFoldersRoot();
+    QString currentBrowserFolderPath() const;
 
     VideoLibraryModel *m_libraryModel;
     LibraryScanner *m_scanner;
@@ -111,4 +128,8 @@ private:
     double m_currentAudioDelay = 0.0;
     quint64 m_thumbnailGeneration = 0;
     QThreadPool m_thumbnailThreadPool;
+    QVector<ConfiguredFolderEntry> m_configuredFolders;
+    bool m_virtualRootNavigationEnabled = true;
+    bool m_showingConfiguredFoldersRoot = false;
+    bool m_currentRootFromConfiguration = false;
 };

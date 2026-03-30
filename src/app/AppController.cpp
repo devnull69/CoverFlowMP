@@ -38,6 +38,22 @@ QString expandUserPath(const QString &path)
     return path;
 }
 
+QString normalizedFolderPath(const QString &path)
+{
+    return QDir(expandUserPath(path)).absolutePath();
+}
+
+bool isSameOrChildPath(const QString &rootPath, const QString &candidatePath)
+{
+    if (rootPath.isEmpty() || candidatePath.isEmpty())
+        return false;
+
+    if (candidatePath == rootPath)
+        return true;
+
+    return candidatePath.startsWith(rootPath + QDir::separator());
+}
+
 }
 
 AppController::AppController(VideoLibraryModel *libraryModel,
@@ -155,10 +171,34 @@ bool AppController::skipImportPromptVisible() const
 
 bool AppController::canNavigateUp() const
 {
+    if (m_showingConfiguredFoldersRoot)
+        return false;
+
     if (!m_libraryModel || m_libraryModel->rowCount() <= 0)
         return false;
 
     return m_libraryModel->itemAt(0).isParentFolder;
+}
+
+void AppController::setConfiguredLibraryFolders(const QJsonArray &folders,
+                                                bool enableVirtualRootNavigation)
+{
+    m_virtualRootNavigationEnabled = enableVirtualRootNavigation;
+    m_configuredFolders.clear();
+
+    for (const QJsonValue &entry : folders) {
+        if (!entry.isObject())
+            continue;
+
+        const QJsonObject folderObject = entry.toObject();
+        const QString name = folderObject.value(QStringLiteral("name")).toString().trimmed();
+        const QString path = normalizedFolderPath(
+            folderObject.value(QStringLiteral("path")).toString().trimmed());
+        if (name.isEmpty() || path.isEmpty())
+            continue;
+
+        m_configuredFolders.push_back({ name, path });
+    }
 }
 
 double AppController::browserDurationForFile(const QString &filePath, double storedDuration) const
@@ -216,15 +256,23 @@ void AppController::startPlayback(double startPosition)
 
 void AppController::initialize(const QString &videoFolder)
 {
-    if (m_rootVideoFolder.isEmpty()) {
-        m_rootVideoFolder = videoFolder;
+    const QString normalizedFolder = normalizedFolderPath(videoFolder);
+    const QString resolvedRootFolder = resolveRootFolderForPath(normalizedFolder);
+    const QString activeRootFolder = resolvedRootFolder.isEmpty()
+        ? normalizedFolder
+        : resolvedRootFolder;
+    m_currentRootFromConfiguration = !resolvedRootFolder.isEmpty();
+
+    if (m_rootVideoFolder != activeRootFolder) {
+        m_rootVideoFolder = activeRootFolder;
         if (m_scanner)
             m_scanner->setRootFolder(m_rootVideoFolder);
     }
 
-    m_videoFolder = videoFolder;
+    m_showingConfiguredFoldersRoot = false;
+    m_videoFolder = normalizedFolder;
     const quint64 generation = ++m_thumbnailGeneration;
-    auto items = m_scanner->scan(videoFolder);
+    auto items = m_scanner->scan(m_videoFolder);
 
     for (auto &item : items) {
         if (!item.isFolder && !item.filePath.isEmpty()) {
@@ -366,7 +414,7 @@ void AppController::playSelected(int index)
 bool AppController::deleteCurrentVideo()
 {
     const auto item = m_libraryModel->itemAt(m_currentIndex);
-    if (item.filePath.isEmpty())
+    if (item.filePath.isEmpty() || item.isVirtualRootEntry)
         return false;
 
     if (item.isFolder) {
@@ -442,7 +490,7 @@ bool AppController::deleteCurrentVideo()
 bool AppController::canDeleteCurrentVideo() const
 {
     const auto item = m_libraryModel->itemAt(m_currentIndex);
-    if (item.filePath.isEmpty() || item.isDemo || item.isParentFolder)
+    if (item.filePath.isEmpty() || item.isDemo || item.isParentFolder || item.isVirtualRootEntry)
         return false;
 
     if (!item.isFolder)
@@ -477,13 +525,17 @@ bool AppController::resetResumeDatabase()
 
 bool AppController::resetCurrentFolderResumeDatabase()
 {
-    if (m_videoFolder.isEmpty())
+    const QString folderPath = currentBrowserFolderPath();
+    if (folderPath.isEmpty())
         return false;
 
-    if (!m_database->clearFolderPlaybackState(m_videoFolder))
+    if (!m_database->clearFolderPlaybackState(folderPath))
         return false;
 
-    initialize(m_videoFolder);
+    if (m_showingConfiguredFoldersRoot)
+        showConfiguredFoldersRoot();
+    else
+        initialize(m_videoFolder);
     return true;
 }
 
@@ -762,6 +814,19 @@ void AppController::setCurrentIndex(int index)
 
 void AppController::navigateUpOrQuit()
 {
+    if (m_database) {
+        setConfiguredLibraryFolders(
+            m_database->loadConfigArray(
+                AppConfig::libraryFoldersKey(),
+                AppConfig::defaultLibraryFoldersArray()),
+            m_virtualRootNavigationEnabled);
+    }
+
+    if (canShowConfiguredFoldersRoot()) {
+        showConfiguredFoldersRoot();
+        return;
+    }
+
     if (canNavigateUp()) {
         initialize(m_libraryModel->itemAt(0).filePath);
         if (m_currentIndex != 0) {
@@ -770,7 +835,15 @@ void AppController::navigateUpOrQuit()
         }
         return;
     }
+}
 
+bool AppController::canOpenBrowserActionDialog() const
+{
+    return m_showingConfiguredFoldersRoot || isAtConfiguredFolderRoot();
+}
+
+void AppController::quitApplication()
+{
     QCoreApplication::quit();
 }
 
@@ -803,4 +876,97 @@ void AppController::setSkipImportPromptVisible(bool visible)
 
     m_skipImportPromptVisible = visible;
     emit skipImportPromptVisibleChanged();
+}
+
+QString AppController::resolveRootFolderForPath(const QString &folderPath) const
+{
+    QString bestMatch;
+
+    for (const ConfiguredFolderEntry &entry : m_configuredFolders) {
+        if (!isSameOrChildPath(entry.path, folderPath))
+            continue;
+
+        if (entry.path.size() > bestMatch.size())
+            bestMatch = entry.path;
+    }
+
+    return bestMatch;
+}
+
+bool AppController::canShowConfiguredFoldersRoot() const
+{
+    return m_virtualRootNavigationEnabled && m_configuredFolders.size() > 1;
+}
+
+bool AppController::isAtConfiguredFolderRoot() const
+{
+    if (m_showingConfiguredFoldersRoot || m_videoFolder.isEmpty())
+        return false;
+
+    return m_videoFolder == m_rootVideoFolder && m_currentRootFromConfiguration;
+}
+
+int AppController::indexOfConfiguredFolder(const QString &folderPath) const
+{
+    for (int i = 0; i < m_configuredFolders.size(); ++i) {
+        if (m_configuredFolders.at(i).path == folderPath)
+            return i;
+    }
+
+    return -1;
+}
+
+QVector<VideoItem> AppController::configuredFolderRootItems() const
+{
+    QVector<VideoItem> items;
+    items.reserve(m_configuredFolders.size());
+
+    for (const ConfiguredFolderEntry &entry : m_configuredFolders) {
+        VideoItem item;
+        item.title = entry.name;
+        item.filePath = entry.path;
+        const QString folderCoverPath = entry.path + "/folder.jpg";
+        item.coverPath = QFileInfo::exists(folderCoverPath) ? folderCoverPath : "";
+        item.isFolder = true;
+        item.isVirtualRootEntry = true;
+        items.push_back(item);
+    }
+
+    return items;
+}
+
+void AppController::showConfiguredFoldersRoot()
+{
+    if (!canShowConfiguredFoldersRoot())
+        return;
+
+    const QVector<VideoItem> items = configuredFolderRootItems();
+    const int previousIndex = m_currentIndex;
+    const int configuredIndex = indexOfConfiguredFolder(m_rootVideoFolder);
+
+    ++m_thumbnailGeneration;
+    m_libraryModel->setItems(items);
+    m_showingConfiguredFoldersRoot = true;
+
+    const int count = m_libraryModel->rowCount();
+    if (count <= 0) {
+        m_currentIndex = 0;
+    } else if (configuredIndex >= 0 && configuredIndex < count) {
+        m_currentIndex = configuredIndex;
+    } else {
+        m_currentIndex = std::clamp(previousIndex, 0, count - 1);
+    }
+
+    if (m_currentIndex != previousIndex)
+        emit currentIndexChanged();
+}
+
+QString AppController::currentBrowserFolderPath() const
+{
+    if (m_showingConfiguredFoldersRoot) {
+        const auto item = m_libraryModel->itemAt(m_currentIndex);
+        return item.isFolder ? item.filePath : QString();
+    }
+
+    return m_videoFolder;
 }

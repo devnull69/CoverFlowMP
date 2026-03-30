@@ -13,4 +13,5 @@ struct VideoItem
     bool isDemo = false;
     bool isFolder = false;
     bool isParentFolder = false;
+    bool isVirtualRootEntry = false;
 };

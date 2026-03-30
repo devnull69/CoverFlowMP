@@ -56,13 +56,15 @@ Im Browser-Modus bewegst du dich durch Ordner und Videos im CoverFlow.
 
 - `Links` / `Rechts`: Auswahl im CoverFlow bewegen
 - `Enter`: Ausgewähltes Element öffnen
-- `Esc`: Eine Ebene nach oben gehen, falls `..` sichtbar ist; im Root-Ordner die App beenden
+- `Esc`: Eine Ebene nach oben gehen, falls `..` sichtbar ist; auf der Hauptebene nicht beenden, bei mehreren konfigurierten Bibliotheksordnern stattdessen in eine virtuelle Ueberebene wechseln
+- `Hoch`: Im Hauptordner und in der virtuellen Ueberebene den Aktionsdialog mit `BEENDEN` und `ZURUECK` oeffnen
 
 ### Öffnen
 
 - `Enter` auf einem Ordner: Ordner öffnen
 - `Enter` auf `..`: Eine Ebene höher gehen
 - `Enter` auf einem Video: Wiedergabe starten
+- `Enter` in der virtuellen Ueberebene auf einen konfigurierten Ordner: Diesen Bibliotheksordner öffnen
 
 ### Zusätzliche Funktionen
 

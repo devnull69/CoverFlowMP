@@ -163,6 +163,7 @@ int main(int argc, char *argv[])
             videoFolder = cliFolder;
     }
 
+    appController.setConfiguredLibraryFolders(configuredFolders, true);
     appController.initialize(videoFolder);
 
     QQmlApplicationEngine engine;
