@@ -822,17 +822,17 @@ void AppController::navigateUpOrQuit()
             m_virtualRootNavigationEnabled);
     }
 
-    if (canShowConfiguredFoldersRoot()) {
-        showConfiguredFoldersRoot();
-        return;
-    }
-
     if (canNavigateUp()) {
         initialize(m_libraryModel->itemAt(0).filePath);
         if (m_currentIndex != 0) {
             m_currentIndex = 0;
             emit currentIndexChanged();
         }
+        return;
+    }
+
+    if (canShowConfiguredFoldersRoot()) {
+        showConfiguredFoldersRoot();
         return;
     }
 }
