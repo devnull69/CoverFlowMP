@@ -1,7 +1,12 @@
-/build
+/build*
 /obj-x86_64-linux-gnu
 /debian
 /_CPack_Packages
+/.qtcreator
+CMakeLists.txt.user
+*.tar.zst
+/src/build
+/pkg
 
 # Keep Debian packaging metadata under version control.
 !/debian/
