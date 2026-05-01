@@ -124,6 +124,26 @@ Wichtig:
 - Im Pause-Modus beendet Cursor-Navigation das Video nie. Am Anfang oder Ende bleibt das Bild einfach auf dem ersten bzw. letzten Frame stehen.
 - Im Normalmodus werden vorhandene Skip-Bereiche auch im Pause-Modus bei der Sprung-Navigation automatisch berücksichtigt.
 
+## Info-Modus
+
+Im Info-Modus laeuft das Video weiter, waehrend gleichzeitig das gleiche Overlay wie im Pause-Modus mit Fortschritt, Position und weiteren Informationen eingeblendet wird. Der Fortschritt aktualisiert sich dabei laufend.
+
+### Bedienung
+
+- `Y`: Info-Modus ein- oder ausschalten
+- `Leertaste`: In den normalen Pause-Modus wechseln
+- `B`: Zurueck zum Browser
+- `Links`: 10 Sekunden zurueck
+- `Rechts`: 10 Sekunden vor
+- `Shift` + `Links`: 5 Sekunden zurueck
+- `Shift` + `Rechts`: 5 Sekunden vor
+- `Hoch`: 1 Minute vor
+- `Runter`: 1 Minute zurueck
+
+Wichtig:
+
+- Im Info-Modus stehen darueber hinaus keine weiteren Funktionen zur Verfuegung.
+
 ### Skip-Bereiche bearbeiten
 
 Skip-Bereiche stehen nur im Normalmodus zur Verfügung. Im Fast-Modus sind sie deaktiviert.

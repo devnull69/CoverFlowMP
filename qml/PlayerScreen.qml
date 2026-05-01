@@ -9,6 +9,7 @@ Item {
     property int resumeChoiceIndex: 0
     property bool messageDialogVisible: false
     property bool audioDelayMode: false
+    property bool infoMode: false
     property bool clearSkipDialogVisible: false
     property int clearSkipChoiceIndex: 1 // 0 = JA, 1 = NEIN
     property int skipImportChoiceIndex: 0 // 0 = JA, 1 = NEIN
@@ -57,6 +58,7 @@ Item {
             forceActiveFocus()
         } else {
             audioDelayMode = false
+            infoMode = false
             clearSkipDialogVisible = false
             skipImportChoiceIndex = 0
         }
@@ -79,7 +81,7 @@ Item {
     Window {
         id: pauseOverlayWindow
         visible: root.visible
-                 && playerController.paused
+                 && (playerController.paused || root.infoMode)
                  && root.Window.window
                  && root.Window.window.active
         transientParent: root.Window.window
@@ -384,8 +386,11 @@ Item {
     Connections {
         target: playerController
         function onPausedChanged() {
-            if (!playerController.paused)
+            if (playerController.paused) {
+                root.infoMode = false
+            } else {
                 root.audioDelayMode = false
+            }
         }
     }
 
@@ -396,6 +401,8 @@ Item {
             return
         if (root.audioDelayMode)
             return
+        if (root.infoMode)
+            root.infoMode = false
         playerController.togglePause()
     }
 
@@ -508,6 +515,10 @@ Item {
     }
 
     Keys.onReturnPressed: function(event) {
+        if (root.infoMode) {
+            event.accepted = true
+            return
+        }
         if (root.messageDialogVisible) {
             appController.clearPlayerMessage()
             event.accepted = true
@@ -532,6 +543,10 @@ Item {
     }
 
     Keys.onEnterPressed: function(event) {
+        if (root.infoMode) {
+            event.accepted = true
+            return
+        }
         if (root.messageDialogVisible) {
             appController.clearPlayerMessage()
             event.accepted = true
@@ -556,6 +571,27 @@ Item {
     }
 
     Keys.onPressed: function(event) {
+        if (event.key === Qt.Key_Y && !playerController.paused && !root.audioDelayMode
+                && !appController.resumePromptVisible && !appController.skipImportPromptVisible
+                && !root.clearSkipDialogVisible && !root.messageDialogVisible) {
+            root.infoMode = !root.infoMode
+            event.accepted = true
+            return
+        }
+
+        if (root.infoMode) {
+            if (event.key === Qt.Key_B) {
+                appController.backToBrowser()
+                event.accepted = true
+                return
+            }
+            if (event.key !== Qt.Key_Space
+                    && event.key !== Qt.Key_Y
+                    && event.key !== Qt.Key_B)
+                event.accepted = true
+            return
+        }
+
         if (root.messageDialogVisible) {
             if (event.key === Qt.Key_B || event.key === Qt.Key_Escape || event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 appController.clearPlayerMessage()
