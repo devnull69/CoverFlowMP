@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QJsonArray>
+#include <QNetworkAccessManager>
 #include <QString>
 #include <QUrl>
 #include <QThreadPool>
@@ -29,6 +30,12 @@ class AppController : public QObject
     Q_PROPERTY(bool fastMode READ fastMode NOTIFY fastModeChanged)
     Q_PROPERTY(bool skipImportPromptVisible READ skipImportPromptVisible NOTIFY skipImportPromptVisibleChanged)
     Q_PROPERTY(bool canNavigateUp READ canNavigateUp NOTIFY currentIndexChanged)
+    Q_PROPERTY(QString browserEpisodeInfoTitle READ browserEpisodeInfoTitle NOTIFY browserEpisodeInfoChanged)
+    Q_PROPERTY(QString browserEpisodeInfoDescription READ browserEpisodeInfoDescription NOTIFY browserEpisodeInfoChanged)
+    Q_PROPERTY(QString browserEpisodeInfoSeriesTitle READ browserEpisodeInfoSeriesTitle NOTIFY browserEpisodeInfoChanged)
+    Q_PROPERTY(QString browserEpisodeInfoSeasonEpisode READ browserEpisodeInfoSeasonEpisode NOTIFY browserEpisodeInfoChanged)
+    Q_PROPERTY(QUrl browserEpisodeInfoCoverSource READ browserEpisodeInfoCoverSource NOTIFY browserEpisodeInfoChanged)
+    Q_PROPERTY(bool browserEpisodeInfoLoading READ browserEpisodeInfoLoading NOTIFY browserEpisodeInfoChanged)
 
 public:
     explicit AppController(VideoLibraryModel *libraryModel,
@@ -49,6 +56,12 @@ public:
     bool fastMode() const;
     bool skipImportPromptVisible() const;
     bool canNavigateUp() const;
+    QString browserEpisodeInfoTitle() const;
+    QString browserEpisodeInfoDescription() const;
+    QString browserEpisodeInfoSeriesTitle() const;
+    QString browserEpisodeInfoSeasonEpisode() const;
+    QUrl browserEpisodeInfoCoverSource() const;
+    bool browserEpisodeInfoLoading() const;
 
     void setConfiguredLibraryFolders(const QJsonArray &folders,
                                      bool enableVirtualRootNavigation = true);
@@ -71,6 +84,8 @@ public:
     Q_INVOKABLE void navigateUpOrQuit();
     Q_INVOKABLE bool canOpenBrowserActionDialog() const;
     Q_INVOKABLE void quitApplication();
+    Q_INVOKABLE bool requestCurrentBrowserEpisodeInfo();
+    Q_INVOKABLE void clearBrowserEpisodeInfo();
 
 signals:
     void playerVisibleChanged();
@@ -81,11 +96,19 @@ signals:
     void playerMessageChanged();
     void fastModeChanged();
     void skipImportPromptVisibleChanged();
+    void browserEpisodeInfoChanged();
 
 private:
     struct ConfiguredFolderEntry {
         QString name;
         QString path;
+    };
+
+    struct SeriesEpisodeRequest {
+        QString seriesName;
+        QUrl coverSource;
+        int season = 0;
+        int episode = 0;
     };
 
     double browserDurationForFile(const QString &filePath, double storedDuration) const;
@@ -106,6 +129,16 @@ private:
     QVector<VideoItem> configuredFolderRootItems() const;
     void showConfiguredFoldersRoot();
     QString currentBrowserFolderPath() const;
+    bool currentSeriesEpisodeRequest(SeriesEpisodeRequest *request) const;
+    void requestShowSuggestion(int requestId, const SeriesEpisodeRequest &episodeRequest);
+    void requestEpisodeInfoPage(int requestId, const SeriesEpisodeRequest &episodeRequest, const QString &showUrl);
+    void setBrowserEpisodeInfoState(const QString &seriesTitle,
+                                    const QString &seasonEpisode,
+                                    const QString &title,
+                                    const QString &description,
+                                    const QUrl &coverSource,
+                                    bool loading);
+    void setBrowserEpisodeInfoFailure();
 
     VideoLibraryModel *m_libraryModel;
     LibraryScanner *m_scanner;
@@ -128,8 +161,16 @@ private:
     double m_currentAudioDelay = 0.0;
     quint64 m_thumbnailGeneration = 0;
     QThreadPool m_thumbnailThreadPool;
+    QNetworkAccessManager m_episodeInfoNetworkManager;
     QVector<ConfiguredFolderEntry> m_configuredFolders;
+    QString m_browserEpisodeInfoSeriesTitle;
+    QString m_browserEpisodeInfoSeasonEpisode;
+    QString m_browserEpisodeInfoTitle;
+    QString m_browserEpisodeInfoDescription;
+    QUrl m_browserEpisodeInfoCoverSource;
     bool m_virtualRootNavigationEnabled = true;
     bool m_showingConfiguredFoldersRoot = false;
     bool m_currentRootFromConfiguration = false;
+    bool m_browserEpisodeInfoLoading = false;
+    int m_browserEpisodeInfoRequestId = 0;
 };

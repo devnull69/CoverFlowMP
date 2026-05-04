@@ -9,6 +9,7 @@
 #include <QFutureWatcher>
 #include <QCursor>
 #include <QCoreApplication>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -17,8 +18,14 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMetaObject>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QRegularExpression>
 #include <QSaveFile>
+#include <QSslError>
 #include <QStandardPaths>
+#include <QTextDocumentFragment>
+#include <QUrlQuery>
 #include <QtConcurrentRun>
 #include <algorithm>
 #include <cmath>
@@ -54,6 +61,199 @@ bool isSameOrChildPath(const QString &rootPath, const QString &candidatePath)
     return candidatePath.startsWith(rootPath + QDir::separator());
 }
 
+QString seriesSearchNameFromTitle(const QString &title, int episodeMarkerStart)
+{
+    QString searchName = title.left(episodeMarkerStart).trimmed();
+    searchName.replace(QRegularExpression(QStringLiteral("[._-]+")), QStringLiteral(" "));
+    searchName.replace(QRegularExpression(QStringLiteral("([A-Z]+)([A-Z][a-z])")), QStringLiteral("\\1 \\2"));
+    searchName.replace(QRegularExpression(QStringLiteral("([a-z0-9])([A-Z])")), QStringLiteral("\\1 \\2"));
+    return searchName.simplified();
+}
+
+bool parseSeriesEpisodeTitle(const QString &title, QString *seriesName, int *season, int *episode)
+{
+    static const QRegularExpression episodePattern(
+        QStringLiteral("(\\d{1,2})x(\\d{2})"),
+        QRegularExpression::CaseInsensitiveOption);
+
+    const QRegularExpressionMatch match = episodePattern.match(title);
+    if (!match.hasMatch())
+        return false;
+
+    const QString searchName = seriesSearchNameFromTitle(title, match.capturedStart());
+    if (searchName.isEmpty())
+        return false;
+
+    bool seasonOk = false;
+    bool episodeOk = false;
+    const int parsedSeason = match.captured(1).toInt(&seasonOk);
+    const int parsedEpisode = match.captured(2).toInt(&episodeOk);
+    if (!seasonOk || !episodeOk || parsedSeason <= 0 || parsedEpisode <= 0)
+        return false;
+
+    if (seriesName)
+        *seriesName = searchName;
+    if (season)
+        *season = parsedSeason;
+    if (episode)
+        *episode = parsedEpisode;
+
+    return true;
+}
+
+QString decodedHtmlText(const QString &html)
+{
+    return QTextDocumentFragment::fromHtml(html).toPlainText().simplified();
+}
+
+QString htmlAttributeValue(const QString &tag, const QString &attributeName)
+{
+    const QRegularExpression attributeRegex(
+        QStringLiteral("\\b%1\\s*=\\s*([\"'])(.*?)\\1")
+            .arg(QRegularExpression::escape(attributeName)),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    const QRegularExpressionMatch match = attributeRegex.match(tag);
+    return match.hasMatch() ? match.captured(2) : QString();
+}
+
+QString debugPreview(const QByteArray &data, int maxLength = 500)
+{
+    QString preview = QString::fromUtf8(data.left(maxLength)).simplified();
+    if (data.size() > maxLength)
+        preview += QStringLiteral(" ...");
+    return preview;
+}
+
+QString seasonEpisodeCode(int season, int episode)
+{
+    return QStringLiteral("S%1E%2")
+        .arg(season, 2, 10, QLatin1Char('0'))
+        .arg(episode, 2, 10, QLatin1Char('0'));
+}
+
+QString extractEpisodeTitleFromHtml(const QString &html, int season, int episode)
+{
+    static const QRegularExpression headingRegex(
+        QStringLiteral("<h2\\b[^>]*>(.*?)</h2>"),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+
+    const QString episodeCode = seasonEpisodeCode(season, episode);
+    QRegularExpressionMatchIterator iterator = headingRegex.globalMatch(html);
+    while (iterator.hasNext()) {
+        const QString headingText = decodedHtmlText(iterator.next().captured(1));
+        const QRegularExpression titleRegex(
+            QStringLiteral("^\\s*%1\\s*:\\s*(.+)$")
+                .arg(QRegularExpression::escape(episodeCode)),
+            QRegularExpression::CaseInsensitiveOption);
+        const QRegularExpressionMatch titleMatch = titleRegex.match(headingText);
+        if (titleMatch.hasMatch())
+            return titleMatch.captured(1).simplified();
+    }
+
+    return {};
+}
+
+QString extractEpisodeDescriptionFromHtml(const QString &html)
+{
+    static const QRegularExpression descriptionLinkRegex(
+        QStringLiteral("<a\\b(?=[^>]*>\\s*Beschreibung\\s+anzeigen\\s*</a>)(?=[^>]*\\bhref\\s*=\\s*([\"'])#([^\"']+)\\1)[^>]*>"),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    static const QRegularExpression classDescriptionRegex(
+        QStringLiteral("<div\\b(?=[^>]*\\bclass\\s*=\\s*([\"'])(?=[^\"']*\\bsmall\\b)(?=[^\"']*\\btext-body\\b)(?=[^\"']*\\blh-lg\\b)(?=[^\"']*\\bmb-3\\b)[^\"']*\\1)[^>]*>(.*?)</div>"),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+    static const QRegularExpression divRegex(
+        QStringLiteral("<div\\b[^>]*\\bclass\\s*=\\s*([\"'])([^\"']*)\\1[^>]*>(.*?)</div>"),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+
+    const QRegularExpressionMatch linkMatch = descriptionLinkRegex.match(html);
+    if (linkMatch.hasMatch()) {
+        const QString targetId = linkMatch.captured(2);
+        qDebug() << "[EpisodeInfo] Beschreibung-Link gefunden, targetId=" << targetId;
+
+        const QRegularExpression targetRegex(
+            QStringLiteral("<div\\b(?=[^>]*\\bid\\s*=\\s*([\"'])%1\\1)[^>]*>(.*?)<section\\b")
+                .arg(QRegularExpression::escape(targetId)),
+            QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+        const QRegularExpressionMatch targetMatch = targetRegex.match(html, linkMatch.capturedEnd());
+        if (targetMatch.hasMatch()) {
+            const QRegularExpressionMatch descriptionMatch = classDescriptionRegex.match(targetMatch.captured(2));
+            if (descriptionMatch.hasMatch()) {
+                const QString description = decodedHtmlText(descriptionMatch.captured(2));
+                if (!description.isEmpty())
+                    return description;
+            }
+        } else {
+            qDebug() << "[EpisodeInfo] Beschreibung-Zielcontainer nicht gefunden fuer" << targetId;
+        }
+    } else {
+        qDebug() << "[EpisodeInfo] Beschreibung-Link nicht gefunden, nutze Klassen-Fallback.";
+    }
+
+    const QRegularExpressionMatch directClassMatch = classDescriptionRegex.match(html);
+    if (directClassMatch.hasMatch()) {
+        const QString description = decodedHtmlText(directClassMatch.captured(2));
+        if (!description.isEmpty())
+            return description;
+    }
+
+    QRegularExpressionMatchIterator iterator = divRegex.globalMatch(html);
+    while (iterator.hasNext()) {
+        const QRegularExpressionMatch match = iterator.next();
+        const QStringList classes = match.captured(2).split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+        if (classes.contains(QStringLiteral("small"))
+            && classes.contains(QStringLiteral("text-body"))
+            && classes.contains(QStringLiteral("lh-lg"))
+            && classes.contains(QStringLiteral("mb-3"))) {
+            return decodedHtmlText(match.captured(3));
+        }
+    }
+
+    return {};
+}
+
+QUrl extractEpisodeCoverSourceFromHtml(const QString &html, const QUrl &baseUrl)
+{
+    static const QRegularExpression imageRegex(
+        QStringLiteral("<img\\b[^>]*\\bclass\\s*=\\s*([\"'])(?=[^\"']*\\bimg-fluid\\b)[^\"']*\\1[^>]*>"),
+        QRegularExpression::CaseInsensitiveOption | QRegularExpression::DotMatchesEverythingOption);
+
+    QRegularExpressionMatchIterator iterator = imageRegex.globalMatch(html);
+    while (iterator.hasNext()) {
+        const QString imageTag = iterator.next().captured(0);
+        QString source = htmlAttributeValue(imageTag, QStringLiteral("data-src")).trimmed();
+        if (source.isEmpty())
+            source = htmlAttributeValue(imageTag, QStringLiteral("src")).trimmed();
+        if (source.isEmpty() || source.startsWith(QStringLiteral("data:"), Qt::CaseInsensitive))
+            continue;
+
+        const QUrl resolvedSource = baseUrl.resolved(QUrl(source));
+        qDebug() << "[EpisodeInfo] HTML-Cover gefunden:" << resolvedSource.toString();
+        return resolvedSource;
+    }
+
+    qDebug() << "[EpisodeInfo] Kein img.img-fluid Cover in HTML gefunden.";
+    return {};
+}
+
+int regexMatchCount(const QString &text, const QRegularExpression &regex)
+{
+    int count = 0;
+    QRegularExpressionMatchIterator iterator = regex.globalMatch(text);
+    while (iterator.hasNext()) {
+        iterator.next();
+        ++count;
+    }
+    return count;
+}
+
+int headingCount(const QString &html)
+{
+    static const QRegularExpression headingRegex(
+        QStringLiteral("<h2\\b[^>]*>"),
+        QRegularExpression::CaseInsensitiveOption);
+    return regexMatchCount(html, headingRegex);
+}
+
 }
 
 AppController::AppController(VideoLibraryModel *libraryModel,
@@ -69,6 +269,20 @@ AppController::AppController(VideoLibraryModel *libraryModel,
     m_thumbnailService(scanner ? scanner->thumbnailService() : nullptr)
 {
     m_thumbnailThreadPool.setMaxThreadCount(2);
+
+    connect(&m_episodeInfoNetworkManager,
+            &QNetworkAccessManager::sslErrors,
+            this,
+            [](QNetworkReply *reply, const QList<QSslError> &errors) {
+                qDebug() << "[EpisodeInfo] TLS-Zertifikatsfehler fuer"
+                         << (reply ? reply->url().toString() : QStringLiteral("<kein Reply>"))
+                         << "- werden ignoriert.";
+                for (const QSslError &error : errors)
+                    qDebug() << "[EpisodeInfo] TLS error:" << error.errorString();
+
+                if (reply)
+                    reply->ignoreSslErrors();
+            });
 
     connect(m_playerController, &PlayerController::playbackFinished,
             this, &AppController::handlePlaybackFinished,
@@ -178,6 +392,36 @@ bool AppController::canNavigateUp() const
         return false;
 
     return m_libraryModel->itemAt(0).isParentFolder;
+}
+
+QString AppController::browserEpisodeInfoTitle() const
+{
+    return m_browserEpisodeInfoTitle;
+}
+
+QString AppController::browserEpisodeInfoDescription() const
+{
+    return m_browserEpisodeInfoDescription;
+}
+
+QString AppController::browserEpisodeInfoSeriesTitle() const
+{
+    return m_browserEpisodeInfoSeriesTitle;
+}
+
+QString AppController::browserEpisodeInfoSeasonEpisode() const
+{
+    return m_browserEpisodeInfoSeasonEpisode;
+}
+
+QUrl AppController::browserEpisodeInfoCoverSource() const
+{
+    return m_browserEpisodeInfoCoverSource;
+}
+
+bool AppController::browserEpisodeInfoLoading() const
+{
+    return m_browserEpisodeInfoLoading;
 }
 
 void AppController::setConfiguredLibraryFolders(const QJsonArray &folders,
@@ -847,6 +1091,37 @@ void AppController::quitApplication()
     QCoreApplication::quit();
 }
 
+bool AppController::requestCurrentBrowserEpisodeInfo()
+{
+    SeriesEpisodeRequest episodeRequest;
+    if (!currentSeriesEpisodeRequest(&episodeRequest)) {
+        qDebug() << "[EpisodeInfo] Kein abrufbares Serienvideo ausgewaehlt.";
+        return false;
+    }
+
+    const int requestId = ++m_browserEpisodeInfoRequestId;
+    qDebug() << "[EpisodeInfo] Start request" << requestId
+             << "seriesName=" << episodeRequest.seriesName
+             << "season=" << episodeRequest.season
+             << "episode=" << episodeRequest.episode;
+    setBrowserEpisodeInfoState(
+        episodeRequest.seriesName,
+        QStringLiteral("S.%1 E.%2").arg(episodeRequest.season).arg(episodeRequest.episode),
+        QStringLiteral("Episodeninfo wird geladen..."),
+        QString(),
+        episodeRequest.coverSource,
+        true);
+    requestShowSuggestion(requestId, episodeRequest);
+    return true;
+}
+
+void AppController::clearBrowserEpisodeInfo()
+{
+    ++m_browserEpisodeInfoRequestId;
+    qDebug() << "[EpisodeInfo] Clear current sidebar state. Next request id is" << m_browserEpisodeInfoRequestId;
+    setBrowserEpisodeInfoState(QString(), QString(), QString(), QString(), QUrl(), false);
+}
+
 void AppController::setPlayerMessage(const QString &message)
 {
     if (m_playerMessage == message)
@@ -969,4 +1244,274 @@ QString AppController::currentBrowserFolderPath() const
     }
 
     return m_videoFolder;
+}
+
+bool AppController::currentSeriesEpisodeRequest(SeriesEpisodeRequest *request) const
+{
+    if (!m_libraryModel)
+        return false;
+
+    const auto item = m_libraryModel->itemAt(m_currentIndex);
+    qDebug() << "[EpisodeInfo] Browser item"
+             << "index=" << m_currentIndex
+             << "title=" << item.title
+             << "filePath=" << item.filePath
+             << "isFolder=" << item.isFolder
+             << "isDemo=" << item.isDemo
+             << "isParentFolder=" << item.isParentFolder
+             << "isVirtualRootEntry=" << item.isVirtualRootEntry;
+
+    if (item.filePath.isEmpty() || item.isFolder || item.isDemo || item.isParentFolder || item.isVirtualRootEntry)
+        return false;
+
+    const QString title = item.title.isEmpty()
+        ? QFileInfo(item.filePath).completeBaseName()
+        : item.title;
+
+    SeriesEpisodeRequest parsedRequest;
+    if (!parseSeriesEpisodeTitle(
+            title,
+            &parsedRequest.seriesName,
+            &parsedRequest.season,
+            &parsedRequest.episode)) {
+        qDebug() << "[EpisodeInfo] Kein Serienfolgen-Muster im Titel gefunden:" << title;
+        return false;
+    }
+
+    const QString localFolderCoverPath = QFileInfo(item.filePath).absolutePath() + QStringLiteral("/folder.jpg");
+    if (QFileInfo::exists(localFolderCoverPath)) {
+        parsedRequest.coverSource = QUrl::fromLocalFile(localFolderCoverPath);
+        qDebug() << "[EpisodeInfo] Lokales Ordnercover gefunden:" << localFolderCoverPath;
+    } else {
+        qDebug() << "[EpisodeInfo] Kein lokales Ordnercover gefunden:" << localFolderCoverPath;
+    }
+
+    qDebug() << "[EpisodeInfo] Titel geparst"
+             << "sourceTitle=" << title
+             << "seriesName=" << parsedRequest.seriesName
+             << "season=" << parsedRequest.season
+             << "episode=" << parsedRequest.episode
+             << "episodeCode=" << seasonEpisodeCode(parsedRequest.season, parsedRequest.episode);
+
+    if (request)
+        *request = parsedRequest;
+
+    return true;
+}
+
+void AppController::requestShowSuggestion(int requestId, const SeriesEpisodeRequest &episodeRequest)
+{
+    QUrl url;
+    url.setScheme(QStringLiteral("https"));
+    // url.setHost(QStringLiteral("websocket.bplaced.net"));
+    url.setHost(QStringLiteral("s.to"));
+    url.setPath(QStringLiteral("/api/search/suggest"));
+
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("term"), episodeRequest.seriesName);
+    url.setQuery(query);
+
+    QNetworkRequest request(url);
+    request.setRawHeader("Accept", "application/json");
+    request.setRawHeader("User-Agent", "CoverFlowMP");
+    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    qDebug() << "[EpisodeInfo] GET suggest" << url.toString(QUrl::FullyEncoded);
+
+    QNetworkReply *reply = m_episodeInfoNetworkManager.get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, requestId, episodeRequest, episodePageUrl = url]() {
+        reply->deleteLater();
+
+        const QVariant httpStatusAttribute = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+        const int httpStatus = httpStatusAttribute.isValid() ? httpStatusAttribute.toInt() : 0;
+        const QByteArray responseBody = reply->readAll();
+
+        qDebug() << "[EpisodeInfo] Suggest finished"
+                 << "requestId=" << requestId
+                 << "httpStatus=" << httpStatus
+                 << "networkError=" << reply->error()
+                 << "errorString=" << reply->errorString()
+                 << "bytes=" << responseBody.size();
+        qDebug() << "[EpisodeInfo] Suggest response preview:" << debugPreview(responseBody);
+
+        if (requestId != m_browserEpisodeInfoRequestId) {
+            qDebug() << "[EpisodeInfo] Veraltete Suggest-Antwort ignoriert" << requestId;
+            return;
+        }
+
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "[EpisodeInfo] Suggest-Netzwerkfehler:" << reply->errorString();
+            setBrowserEpisodeInfoFailure();
+            return;
+        }
+        if (httpStatus < 200 || httpStatus >= 300) {
+            qDebug() << "[EpisodeInfo] Suggest-HTTP-Fehler:" << httpStatus;
+            setBrowserEpisodeInfoFailure();
+            return;
+        }
+
+        QJsonParseError parseError;
+        const QJsonDocument document = QJsonDocument::fromJson(responseBody, &parseError);
+        if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+            qDebug() << "[EpisodeInfo] Suggest-JSON ungueltig:" << parseError.errorString();
+            setBrowserEpisodeInfoFailure();
+            return;
+        }
+
+        const QJsonArray shows = document.object().value(QStringLiteral("shows")).toArray();
+        qDebug() << "[EpisodeInfo] Suggest shows count=" << shows.size();
+        if (shows.isEmpty() || !shows.first().isObject()) {
+            qDebug() << "[EpisodeInfo] Keine Show in Suggest-Antwort gefunden.";
+            setBrowserEpisodeInfoFailure();
+            return;
+        }
+
+        const QJsonObject show = shows.first().toObject();
+        const QString showName = show.value(QStringLiteral("name")).toString();
+        const QString showUrl = show.value(QStringLiteral("url")).toString().trimmed();
+        qDebug() << "[EpisodeInfo] Suggest shows[0]"
+                 << "name=" << showName
+                 << "url=" << showUrl;
+        if (showUrl.isEmpty()) {
+            setBrowserEpisodeInfoFailure();
+            return;
+        }
+
+        requestEpisodeInfoPage(requestId, episodeRequest, showUrl);
+    });
+}
+
+void AppController::requestEpisodeInfoPage(int requestId, const SeriesEpisodeRequest &episodeRequest, const QString &showUrl)
+{
+    QString showPath = showUrl.trimmed();
+    if (showPath.startsWith(QStringLiteral("http://")) || showPath.startsWith(QStringLiteral("https://"))) {
+        showPath = QUrl(showPath).path();
+    }
+
+    while (showPath.startsWith(QLatin1Char('/')))
+        showPath.remove(0, 1);
+    while (showPath.endsWith(QLatin1Char('/')))
+        showPath.chop(1);
+
+    if (showPath.isEmpty()) {
+        qDebug() << "[EpisodeInfo] Leere Show-URL nach Normalisierung:" << showUrl;
+        setBrowserEpisodeInfoFailure();
+        return;
+    }
+
+    QUrl url;
+    url.setScheme(QStringLiteral("https"));
+    // url.setHost(QStringLiteral("websocket.bplaced.net"));
+    url.setHost(QStringLiteral("s.to"));
+    url.setPath(QStringLiteral("/") + showPath
+                + QStringLiteral("/staffel-%1/episode-%2")
+                      .arg(episodeRequest.season)
+                      .arg(episodeRequest.episode));
+
+    QNetworkRequest request(url);
+    request.setRawHeader("Accept", "text/html,application/xhtml+xml");
+    request.setRawHeader("User-Agent", "CoverFlowMP");
+    request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::AlwaysNetwork);
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    qDebug() << "[EpisodeInfo] GET episode page" << url.toString();
+
+    QNetworkReply *reply = m_episodeInfoNetworkManager.get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, requestId, episodeRequest, episodePageUrl = url]() {
+        reply->deleteLater();
+
+        const QVariant httpStatusAttribute = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
+        const int httpStatus = httpStatusAttribute.isValid() ? httpStatusAttribute.toInt() : 0;
+        const QByteArray responseBody = reply->readAll();
+
+        qDebug() << "[EpisodeInfo] Episode page finished"
+                 << "requestId=" << requestId
+                 << "httpStatus=" << httpStatus
+                 << "networkError=" << reply->error()
+                 << "errorString=" << reply->errorString()
+                 << "bytes=" << responseBody.size();
+        qDebug() << "[EpisodeInfo] Episode page response preview:" << debugPreview(responseBody);
+
+        if (requestId != m_browserEpisodeInfoRequestId) {
+            qDebug() << "[EpisodeInfo] Veraltete Episodenseite ignoriert" << requestId;
+            return;
+        }
+
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "[EpisodeInfo] Episodenseiten-Netzwerkfehler:" << reply->errorString();
+            setBrowserEpisodeInfoFailure();
+            return;
+        }
+        if (httpStatus < 200 || httpStatus >= 300) {
+            qDebug() << "[EpisodeInfo] Episodenseiten-HTTP-Fehler:" << httpStatus;
+            setBrowserEpisodeInfoFailure();
+            return;
+        }
+
+        const QString html = QString::fromUtf8(responseBody);
+        qDebug() << "[EpisodeInfo] Parse episode page"
+                 << "h2Count=" << headingCount(html)
+                 << "episodeCode=" << seasonEpisodeCode(episodeRequest.season, episodeRequest.episode);
+
+        const QString title = extractEpisodeTitleFromHtml(html, episodeRequest.season, episodeRequest.episode);
+        const QString description = extractEpisodeDescriptionFromHtml(html);
+        const QUrl coverSource = episodeRequest.coverSource.isEmpty()
+            ? extractEpisodeCoverSourceFromHtml(html, episodePageUrl)
+            : episodeRequest.coverSource;
+        qDebug() << "[EpisodeInfo] Parse result"
+                 << "title=" << title
+                 << "descriptionLength=" << description.size()
+                 << "coverSource=" << coverSource.toString();
+
+        if (title.isEmpty()) {
+            setBrowserEpisodeInfoFailure();
+            return;
+        }
+
+        setBrowserEpisodeInfoState(
+            episodeRequest.seriesName,
+            QStringLiteral("S.%1 E.%2").arg(episodeRequest.season).arg(episodeRequest.episode),
+            title,
+            description,
+            coverSource,
+            false);
+    });
+}
+
+void AppController::setBrowserEpisodeInfoState(const QString &seriesTitle,
+                                               const QString &seasonEpisode,
+                                               const QString &title,
+                                               const QString &description,
+                                               const QUrl &coverSource,
+                                               bool loading)
+{
+    if (m_browserEpisodeInfoSeriesTitle == seriesTitle
+        && m_browserEpisodeInfoSeasonEpisode == seasonEpisode
+        && m_browserEpisodeInfoTitle == title
+        && m_browserEpisodeInfoDescription == description
+        && m_browserEpisodeInfoCoverSource == coverSource
+        && m_browserEpisodeInfoLoading == loading) {
+        return;
+    }
+
+    m_browserEpisodeInfoSeriesTitle = seriesTitle;
+    m_browserEpisodeInfoSeasonEpisode = seasonEpisode;
+    m_browserEpisodeInfoTitle = title;
+    m_browserEpisodeInfoDescription = description;
+    m_browserEpisodeInfoCoverSource = coverSource;
+    m_browserEpisodeInfoLoading = loading;
+    emit browserEpisodeInfoChanged();
+}
+
+void AppController::setBrowserEpisodeInfoFailure()
+{
+    qDebug() << "[EpisodeInfo] Fehlerzustand wird in Sidebar angezeigt.";
+    setBrowserEpisodeInfoState(
+        m_browserEpisodeInfoSeriesTitle,
+        m_browserEpisodeInfoSeasonEpisode,
+        QStringLiteral("Episodeninfo konnte nicht abgerufen werden"),
+        QString(),
+        m_browserEpisodeInfoCoverSource,
+        false);
 }

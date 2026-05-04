@@ -32,6 +32,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     Core
     DBus
     Gui
+    Network
     Quick
     Qml
     Sql
@@ -118,6 +119,7 @@ target_link_libraries(CoverFlowMPApp PRIVATE
     Qt6::Concurrent
     Qt6::DBus
     Qt6::Gui
+    Qt6::Network
     Qt6::Quick
     Qt6::Qml
     Qt6::Widgets

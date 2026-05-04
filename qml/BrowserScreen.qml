@@ -13,7 +13,16 @@ Item {
     property int actionChoiceIndex: 0 // 0 = BEENDEN, 1 = ZURUECK
     property bool messageDialogVisible: false
     property string messageDialogText: ""
+    property bool episodeInfoSidebarVisible: false
     property date currentDateTime: new Date()
+
+    function hideEpisodeInfoSidebar() {
+        if (!episodeInfoSidebarVisible && appController.browserEpisodeInfoTitle === "")
+            return
+
+        episodeInfoSidebarVisible = false
+        appController.clearBrowserEpisodeInfo()
+    }
 
     function pad2(value) {
         return value < 10 ? "0" + value : "" + value
@@ -75,12 +84,13 @@ Item {
     }
 
     Keys.onEscapePressed: function(event) {
-        if (root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible || root.episodeInfoSidebarVisible) {
             root.deleteDialogVisible = false
             root.resetDialogVisible = false
             root.actionDialogVisible = false
             root.messageDialogVisible = false
             root.messageDialogText = ""
+            root.hideEpisodeInfoSidebar()
             appController.clearPlayerMessage()
             event.accepted = true
             return
@@ -91,7 +101,7 @@ Item {
     }
 
     Keys.onLeftPressed: function(event) {
-        if (root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible || root.episodeInfoSidebarVisible) {
             event.accepted = true
             return
         }
@@ -100,7 +110,7 @@ Item {
     }
 
     Keys.onRightPressed: function(event) {
-        if (root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible) {
+        if (root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible || root.episodeInfoSidebarVisible) {
             event.accepted = true
             return
         }
@@ -139,6 +149,11 @@ Item {
             event.accepted = true
             return
         }
+        if (root.episodeInfoSidebarVisible) {
+            root.hideEpisodeInfoSidebar()
+            event.accepted = true
+            return
+        }
         appController.playSelected(appController.currentIndex)
         event.accepted = true
     }
@@ -174,12 +189,17 @@ Item {
             event.accepted = true
             return
         }
+        if (root.episodeInfoSidebarVisible) {
+            root.hideEpisodeInfoSidebar()
+            event.accepted = true
+            return
+        }
         appController.playSelected(appController.currentIndex)
         event.accepted = true
     }
 
     Keys.onUpPressed: function(event) {
-        if (root.messageDialogVisible) {
+        if (root.messageDialogVisible || root.episodeInfoSidebarVisible) {
             event.accepted = true
             return
         }
@@ -207,7 +227,7 @@ Item {
     }
 
     Keys.onDownPressed: function(event) {
-        if (root.messageDialogVisible) {
+        if (root.messageDialogVisible || root.episodeInfoSidebarVisible) {
             event.accepted = true
             return
         }
@@ -233,9 +253,25 @@ Item {
                 && !root.deleteDialogVisible
                 && !root.resetDialogVisible
                 && !root.actionDialogVisible
+                && !root.messageDialogVisible
+                && !root.episodeInfoSidebarVisible
                 && appController.canDeleteCurrentVideo()) {
             root.deleteChoiceIndex = 1
             root.deleteDialogVisible = true
+            event.accepted = true
+            return
+        }
+
+        if (event.key === Qt.Key_I
+                && !root.deleteDialogVisible
+                && !root.resetDialogVisible
+                && !root.actionDialogVisible
+                && !root.messageDialogVisible) {
+            if (root.episodeInfoSidebarVisible) {
+                root.hideEpisodeInfoSidebar()
+            } else if (appController.requestCurrentBrowserEpisodeInfo()) {
+                root.episodeInfoSidebarVisible = true
+            }
             event.accepted = true
             return
         }
@@ -244,7 +280,8 @@ Item {
                 && !root.deleteDialogVisible
                 && !root.resetDialogVisible
                 && !root.actionDialogVisible
-                && !root.messageDialogVisible) {
+                && !root.messageDialogVisible
+                && !root.episodeInfoSidebarVisible) {
             root.messageDialogText = ""
             appController.toggleFastMode()
             root.messageDialogVisible = true
@@ -252,7 +289,12 @@ Item {
             return
         }
 
-        if (event.key === Qt.Key_R && !root.deleteDialogVisible && !root.resetDialogVisible && !root.actionDialogVisible) {
+        if (event.key === Qt.Key_R
+                && !root.deleteDialogVisible
+                && !root.resetDialogVisible
+                && !root.actionDialogVisible
+                && !root.messageDialogVisible
+                && !root.episodeInfoSidebarVisible) {
             root.resetChoiceIndex = 2
             root.resetDialogVisible = true
             event.accepted = true
@@ -263,19 +305,21 @@ Item {
                 && !root.deleteDialogVisible
                 && !root.resetDialogVisible
                 && !root.actionDialogVisible
-                && !root.messageDialogVisible) {
+                && !root.messageDialogVisible
+                && !root.episodeInfoSidebarVisible) {
             root.messageDialogText = "Version " + appController.appVersion
             root.messageDialogVisible = true
             event.accepted = true
             return
         }
 
-        if ((root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible) && event.key === Qt.Key_B) {
+        if ((root.deleteDialogVisible || root.resetDialogVisible || root.actionDialogVisible || root.messageDialogVisible || root.episodeInfoSidebarVisible) && event.key === Qt.Key_B) {
             root.deleteDialogVisible = false
             root.resetDialogVisible = false
             root.actionDialogVisible = false
             root.messageDialogVisible = false
             root.messageDialogText = ""
+            root.hideEpisodeInfoSidebar()
             appController.clearPlayerMessage()
             event.accepted = true
         }
@@ -290,6 +334,11 @@ Item {
                 root.messageDialogText = appController.playerMessage
             else
                 root.messageDialogText = ""
+            root.forceActiveFocus()
+        }
+
+        function onCurrentIndexChanged() {
+            root.hideEpisodeInfoSidebar()
             root.forceActiveFocus()
         }
     }
@@ -376,6 +425,130 @@ Item {
                 font.bold: true
                 font.pixelSize: Math.max(16, root.height * 0.024)
                 horizontalAlignment: Text.AlignRight
+            }
+        }
+    }
+
+    Rectangle {
+        id: episodeInfoSidebar
+        z: 1200
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: Math.min(parent.width * 0.90, Math.max(320, parent.width * 0.34))
+        x: root.episodeInfoSidebarVisible ? 0 : -width
+        color: "#D91A1A1A"
+        border.width: 1
+        border.color: "#707070"
+        clip: true
+
+        Behavior on x {
+            NumberAnimation {
+                duration: 230
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        Item {
+            id: episodeInfoContent
+            anchors.fill: parent
+            anchors.margins: Math.max(26, root.height * 0.055)
+
+            BusyIndicator {
+                id: episodeInfoBusy
+                visible: appController.browserEpisodeInfoLoading
+                running: visible
+                anchors.left: parent.left
+                anchors.top: parent.top
+                width: Math.max(34, root.height * 0.052)
+                height: width
+            }
+
+            Flickable {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: appController.browserEpisodeInfoLoading ? episodeInfoBusy.bottom : parent.top
+                anchors.topMargin: appController.browserEpisodeInfoLoading ? Math.max(18, root.height * 0.025) : 0
+                anchors.bottom: parent.bottom
+                clip: true
+                contentWidth: width
+                contentHeight: episodeInfoColumn.height
+
+                Column {
+                    id: episodeInfoColumn
+                    width: parent.width
+                    height: implicitHeight
+                    spacing: Math.max(12, root.height * 0.018)
+
+                    Text {
+                        width: parent.width
+                        visible: appController.browserEpisodeInfoSeriesTitle !== ""
+                        text: appController.browserEpisodeInfoSeriesTitle
+                        color: "#F4F4F4"
+                        wrapMode: Text.WordWrap
+                        font.bold: true
+                        font.pixelSize: Math.max(18, Math.min(28, root.height * 0.032))
+                        lineHeight: 1.08
+                    }
+
+                    Text {
+                        width: parent.width
+                        visible: appController.browserEpisodeInfoSeasonEpisode !== ""
+                        text: appController.browserEpisodeInfoSeasonEpisode
+                        color: "#CFCFCF"
+                        wrapMode: Text.WordWrap
+                        font.bold: true
+                        font.pixelSize: Math.max(15, Math.min(22, root.height * 0.024))
+                        lineHeight: 1.05
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: appController.browserEpisodeInfoTitle
+                        color: "white"
+                        wrapMode: Text.WordWrap
+                        font.bold: true
+                        font.pixelSize: Math.max(22, Math.min(34, root.height * 0.038))
+                        lineHeight: 1.12
+                    }
+
+                    Row {
+                        id: episodeInfoBodyRow
+                        width: parent.width
+                        visible: appController.browserEpisodeInfoDescription !== ""
+                                 || String(appController.browserEpisodeInfoCoverSource) !== ""
+                        spacing: Math.max(14, root.width * 0.012)
+
+                        readonly property bool hasCover: String(appController.browserEpisodeInfoCoverSource) !== ""
+
+                        Item {
+                            width: episodeInfoBodyRow.hasCover
+                                   ? (episodeInfoBodyRow.width - episodeInfoBodyRow.spacing) * 0.66
+                                   : episodeInfoBodyRow.width
+                            height: episodeInfoDescriptionText.height
+
+                            Text {
+                                id: episodeInfoDescriptionText
+                                width: parent.width
+                                visible: appController.browserEpisodeInfoDescription !== ""
+                                text: appController.browserEpisodeInfoDescription
+                                color: "#E6E6E6"
+                                wrapMode: Text.WordWrap
+                                font.pixelSize: Math.max(16, Math.min(24, root.height * 0.027))
+                                lineHeight: 1.18
+                            }
+                        }
+
+                        Image {
+                            width: (episodeInfoBodyRow.width - episodeInfoBodyRow.spacing) * 0.34
+                            height: width * 1.45
+                            visible: episodeInfoBodyRow.hasCover
+                            source: appController.browserEpisodeInfoCoverSource
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            asynchronous: true
+                        }
+                    }
+                }
             }
         }
     }

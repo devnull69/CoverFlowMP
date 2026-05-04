@@ -70,6 +70,7 @@ Im Browser-Modus bewegst du dich durch Ordner und Videos im CoverFlow.
 
 - `0`: Ausgewähltes Video löschen oder einen leeren Ordner beziehungsweise einen Ordner nur mit `folder.jpg` löschen, nach Sicherheitsabfrage
 - `F`: Fast-Modus umschalten
+- `I`: Bei Serienfolgen im Format `7x01` Episodentitel und Beschreibung live abrufen und in einer Sidebar anzeigen
 - `R`: Resume- und Skip-Datenbank komplett zurücksetzen, nach Sicherheitsabfrage
 - `V`: Aktuelle Versionsnummer der App anzeigen
 
