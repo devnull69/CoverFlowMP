@@ -106,6 +106,8 @@ private:
 
     struct SeriesEpisodeRequest {
         QString seriesName;
+        QString seriesFileName;
+        QString episodeInfoHost;
         QUrl coverSource;
         int season = 0;
         int episode = 0;
@@ -130,6 +132,8 @@ private:
     void showConfiguredFoldersRoot();
     QString currentBrowserFolderPath() const;
     bool currentSeriesEpisodeRequest(SeriesEpisodeRequest *request) const;
+    QString configuredEpisodeInfoHost() const;
+    QString configuredEpisodeLookupKeyForSeriesFileName(const QString &seriesFileName) const;
     void requestShowSuggestion(int requestId, const SeriesEpisodeRequest &episodeRequest);
     void requestEpisodeInfoPage(int requestId, const SeriesEpisodeRequest &episodeRequest, const QString &showUrl);
     void setBrowserEpisodeInfoState(const QString &seriesTitle,

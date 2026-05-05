@@ -371,6 +371,18 @@ bool AppDatabase::ensureDefaultConfiguration()
         return false;
     }
 
+    if (!loadConfigRecord(AppConfig::episodeInfoHostKey()).found
+        && !saveConfigString(AppConfig::episodeInfoHostKey(),
+                             AppConfig::defaultEpisodeInfoHost())) {
+        return false;
+    }
+
+    if (!loadConfigRecord(AppConfig::episodeInfoLookupKeysKey()).found
+        && !saveConfigArray(AppConfig::episodeInfoLookupKeysKey(),
+                            AppConfig::defaultEpisodeInfoLookupKeysArray())) {
+        return false;
+    }
+
     return true;
 }
 
@@ -730,6 +742,8 @@ bool AppDatabase::saveConfigValue(const QString &key,
                                   const QString &value,
                                   AppConfig::ValueType valueType)
 {
+    const QString storedValue = value.isNull() ? QStringLiteral("") : value;
+
     QSqlQuery query(m_db);
     query.prepare(
         QStringLiteral("INSERT INTO app_config(config_key, config_value, value_type, updated_at) "
@@ -739,7 +753,7 @@ bool AppDatabase::saveConfigValue(const QString &key,
                        "value_type = excluded.value_type, "
                        "updated_at = excluded.updated_at"));
     query.addBindValue(key);
-    query.addBindValue(value);
+    query.addBindValue(storedValue);
     query.addBindValue(AppConfig::valueTypeName(valueType));
     query.addBindValue(currentUtcTimestamp());
     return query.exec();

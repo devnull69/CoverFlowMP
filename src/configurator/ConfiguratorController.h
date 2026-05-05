@@ -19,6 +19,10 @@ class ConfiguratorController : public QObject
     Q_PROPERTY(bool canDeleteFolderEntry READ canDeleteFolderEntry NOTIFY folderActionsChanged)
     Q_PROPERTY(bool canMoveFolderEntryUp READ canMoveFolderEntryUp NOTIFY folderActionsChanged)
     Q_PROPERTY(bool canMoveFolderEntryDown READ canMoveFolderEntryDown NOTIFY folderActionsChanged)
+    Q_PROPERTY(QString episodeInfoHost READ episodeInfoHost WRITE setEpisodeInfoHost NOTIFY episodeInfoHostChanged)
+    Q_PROPERTY(QVariantList episodeLookupEntries READ episodeLookupEntries NOTIFY episodeLookupEntriesChanged)
+    Q_PROPERTY(int selectedEpisodeLookupIndex READ selectedEpisodeLookupIndex WRITE setSelectedEpisodeLookupIndex NOTIFY selectedEpisodeLookupIndexChanged)
+    Q_PROPERTY(bool canDeleteEpisodeLookupEntry READ canDeleteEpisodeLookupEntry NOTIFY episodeLookupActionsChanged)
     Q_PROPERTY(bool canSave READ canSave NOTIFY canSaveChanged)
 
 public:
@@ -41,6 +45,12 @@ public:
     bool canDeleteFolderEntry() const;
     bool canMoveFolderEntryUp() const;
     bool canMoveFolderEntryDown() const;
+    QString episodeInfoHost() const;
+    void setEpisodeInfoHost(const QString &host);
+    QVariantList episodeLookupEntries() const;
+    int selectedEpisodeLookupIndex() const;
+    void setSelectedEpisodeLookupIndex(int index);
+    bool canDeleteEpisodeLookupEntry() const;
     bool canSave() const;
 
     Q_INVOKABLE void browseBackgroundImage();
@@ -48,6 +58,8 @@ public:
     Q_INVOKABLE void removeSelectedFolderEntry();
     Q_INVOKABLE void moveSelectedFolderEntryUp();
     Q_INVOKABLE void moveSelectedFolderEntryDown();
+    Q_INVOKABLE void addEpisodeLookupEntry();
+    Q_INVOKABLE void removeSelectedEpisodeLookupEntry();
     Q_INVOKABLE void saveAndQuit();
     Q_INVOKABLE void cancelAndQuit();
 
@@ -59,6 +71,10 @@ signals:
     void libraryFoldersChanged();
     void selectedFolderIndexChanged();
     void folderActionsChanged();
+    void episodeInfoHostChanged();
+    void episodeLookupEntriesChanged();
+    void selectedEpisodeLookupIndexChanged();
+    void episodeLookupActionsChanged();
     void canSaveChanged();
 
 private:
@@ -67,12 +83,19 @@ private:
         QString path;
     };
 
+    struct EpisodeLookupEntry {
+        QString seriesFileName;
+        QString lookupKey;
+    };
+
     void loadSettings();
     void updateBackgroundValidation();
     QString folderDialogStartPath() const;
     QString uniqueFolderNameForPath(const QString &folderPath) const;
     QString resolvedBackgroundPath() const;
     bool isValidImageFile(const QString &path) const;
+    bool episodeSeriesFileNameExists(const QString &seriesFileName) const;
+    QString normalizedEpisodeInfoHost() const;
 
     AppDatabase *m_database;
     int m_currentSection = 0;
@@ -82,4 +105,7 @@ private:
     QString m_backgroundValidationMessage;
     QVector<FolderEntry> m_libraryFolders;
     int m_selectedFolderIndex = -1;
+    QString m_episodeInfoHost;
+    QVector<EpisodeLookupEntry> m_episodeLookupEntries;
+    int m_selectedEpisodeLookupIndex = -1;
 };

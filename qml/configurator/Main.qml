@@ -51,7 +51,7 @@ ApplicationWindow {
                     ListView {
                         anchors.fill: parent
                         anchors.margins: 16
-                        model: ["Ansicht", "Ordner"]
+                        model: ["Ansicht", "Ordner", "Episodeninfo"]
                         spacing: 10
                         currentIndex: configController.currentSection
                         clip: true
@@ -337,6 +337,183 @@ ApplicationWindow {
                                             text: "↓"
                                             enabled: configController.canMoveFolderEntryDown
                                             onClicked: configController.moveSelectedFolderEntryDown()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        ColumnLayout {
+                            spacing: 18
+
+                            Label {
+                                text: "Episodeninfo"
+                                font.pixelSize: 24
+                                font.bold: true
+                                color: "#17324D"
+                            }
+
+                            Label {
+                                text: "Verwalte hier Serien-Dateinamen und die dazugehoerigen Lookup-Keys fuer Episodeninfos."
+                                wrapMode: Text.WordWrap
+                                color: "#4D6277"
+                                Layout.fillWidth: true
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: 12
+
+                                Label {
+                                    Layout.preferredWidth: 120
+                                    text: "Host"
+                                    font.bold: true
+                                    color: "#17324D"
+                                }
+
+                                TextField {
+                                    Layout.fillWidth: true
+                                    text: configController.episodeInfoHost
+                                    selectByMouse: true
+                                    onTextChanged: configController.episodeInfoHost = text
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                spacing: 16
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.minimumHeight: 280
+                                    radius: 14
+                                    color: "#F6F9FC"
+                                    border.color: "#CAD5E0"
+                                    border.width: 1
+
+                                    Column {
+                                        anchors.fill: parent
+                                        anchors.margins: 12
+                                        spacing: 8
+
+                                        Rectangle {
+                                            width: parent.width
+                                            radius: 10
+                                            color: "#E3EBF3"
+                                            border.color: "#CAD5E0"
+                                            border.width: 1
+                                            implicitHeight: 44
+
+                                            RowLayout {
+                                                anchors.fill: parent
+                                                anchors.leftMargin: 14
+                                                anchors.rightMargin: 14
+                                                spacing: 12
+
+                                                Label {
+                                                    Layout.preferredWidth: 220
+                                                    text: "Serien-Dateiname"
+                                                    font.bold: true
+                                                    color: "#17324D"
+                                                }
+
+                                                Label {
+                                                    Layout.fillWidth: true
+                                                    text: "Lookup-Key"
+                                                    font.bold: true
+                                                    color: "#17324D"
+                                                }
+                                            }
+                                        }
+
+                                        Rectangle {
+                                            width: parent.width
+                                            height: parent.height - 52
+                                            radius: 10
+                                            color: "#FCFDFE"
+                                            border.color: "#D7E0E8"
+                                            border.width: 1
+
+                                            ScrollView {
+                                                anchors.fill: parent
+                                                clip: true
+
+                                                ListView {
+                                                    id: episodeLookupListView
+                                                    anchors.fill: parent
+                                                    model: configController.episodeLookupEntries
+                                                    spacing: 4
+                                                    clip: true
+                                                    currentIndex: configController.selectedEpisodeLookupIndex
+
+                                                    delegate: Rectangle {
+                                                        required property int index
+                                                        required property var modelData
+                                                        width: episodeLookupListView.width
+                                                        height: 48
+                                                        radius: 8
+                                                        color: ListView.isCurrentItem ? "#D9ECFF" : "transparent"
+                                                        border.width: 1
+                                                        border.color: ListView.isCurrentItem ? "#7CAED8" : "transparent"
+
+                                                        RowLayout {
+                                                            anchors.fill: parent
+                                                            anchors.leftMargin: 14
+                                                            anchors.rightMargin: 14
+                                                            spacing: 12
+
+                                                            Label {
+                                                                Layout.preferredWidth: 220
+                                                                text: modelData.seriesFileName
+                                                                color: "#17324D"
+                                                                elide: Text.ElideRight
+                                                            }
+
+                                                            Label {
+                                                                Layout.fillWidth: true
+                                                                text: modelData.lookupKey
+                                                                color: "#3D546A"
+                                                                elide: Text.ElideRight
+                                                            }
+                                                        }
+
+                                                        MouseArea {
+                                                            anchors.fill: parent
+                                                            onClicked: configController.selectedEpisodeLookupIndex = index
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Item {
+                                    Layout.preferredWidth: 120
+                                    Layout.maximumWidth: 120
+                                    Layout.minimumWidth: 120
+                                    Layout.alignment: Qt.AlignTop
+                                    Layout.fillHeight: true
+
+                                    Column {
+                                        anchors.top: parent.top
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        spacing: 10
+
+                                        Button {
+                                            width: parent.width
+                                            text: "Neu"
+                                            onClicked: configController.addEpisodeLookupEntry()
+                                        }
+
+                                        Button {
+                                            width: parent.width
+                                            text: "Loeschen"
+                                            enabled: configController.canDeleteEpisodeLookupEntry
+                                            onClicked: configController.removeSelectedEpisodeLookupEntry()
                                         }
                                     }
                                 }

@@ -14,6 +14,16 @@ QString libraryFoldersKey()
     return QStringLiteral("library.folders");
 }
 
+QString episodeInfoHostKey()
+{
+    return QStringLiteral("episodeInfo.host");
+}
+
+QString episodeInfoLookupKeysKey()
+{
+    return QStringLiteral("episodeInfo.lookupKeys");
+}
+
 QString legacyPlaybackMergeCheckedKey()
 {
     return QStringLiteral("migration.legacyPlaybackMergeChecked");
@@ -24,6 +34,11 @@ QString defaultBrowserBackground()
     return QStringLiteral("default");
 }
 
+QString defaultEpisodeInfoHost()
+{
+    return QStringLiteral("");
+}
+
 QJsonArray defaultLibraryFoldersArray()
 {
     QJsonArray folders;
@@ -32,6 +47,11 @@ QJsonArray defaultLibraryFoldersArray()
     folder.insert(QStringLiteral("path"), QStringLiteral("~/Videos"));
     folders.append(folder);
     return folders;
+}
+
+QJsonArray defaultEpisodeInfoLookupKeysArray()
+{
+    return {};
 }
 
 QStringList defaultLibraryFolders()

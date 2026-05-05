@@ -61,6 +61,40 @@ bool isSameOrChildPath(const QString &rootPath, const QString &candidatePath)
     return candidatePath.startsWith(rootPath + QDir::separator());
 }
 
+QString normalizedSeriesFileNameKey(const QString &seriesFileName)
+{
+    QString normalized = seriesFileName.trimmed();
+    normalized.remove(QRegularExpression(QStringLiteral("[\\s._-]+")));
+    return normalized;
+}
+
+QString normalizedEpisodeInfoHost(const QString &host)
+{
+    QString normalized = host.trimmed();
+    if (normalized.isEmpty())
+        return QStringLiteral("");
+
+    if (normalized.startsWith(QStringLiteral("http://"))
+        || normalized.startsWith(QStringLiteral("https://"))) {
+        const QUrl url(normalized);
+        return url.host().trimmed();
+    }
+
+    while (normalized.startsWith(QLatin1Char('/')))
+        normalized.remove(0, 1);
+
+    const int slashIndex = normalized.indexOf(QLatin1Char('/'));
+    if (slashIndex >= 0)
+        normalized = normalized.left(slashIndex);
+
+    return normalized.trimmed();
+}
+
+QString seriesFileNameKeyFromTitle(const QString &title, int episodeMarkerStart)
+{
+    return normalizedSeriesFileNameKey(title.left(episodeMarkerStart));
+}
+
 QString seriesSearchNameFromTitle(const QString &title, int episodeMarkerStart)
 {
     QString searchName = title.left(episodeMarkerStart).trimmed();
@@ -70,7 +104,33 @@ QString seriesSearchNameFromTitle(const QString &title, int episodeMarkerStart)
     return searchName.simplified();
 }
 
-bool parseSeriesEpisodeTitle(const QString &title, QString *seriesName, int *season, int *episode)
+QString episodeInfoShowPathFromLookupKey(const QString &lookupKey)
+{
+    QString normalizedLookupKey = lookupKey.trimmed();
+    if (normalizedLookupKey.startsWith(QStringLiteral("http://"))
+        || normalizedLookupKey.startsWith(QStringLiteral("https://"))) {
+        normalizedLookupKey = QUrl(normalizedLookupKey).path();
+    }
+
+    while (normalizedLookupKey.startsWith(QLatin1Char('/')))
+        normalizedLookupKey.remove(0, 1);
+    while (normalizedLookupKey.endsWith(QLatin1Char('/')))
+        normalizedLookupKey.chop(1);
+
+    if (normalizedLookupKey.isEmpty())
+        return {};
+
+    if (normalizedLookupKey.startsWith(QStringLiteral("serie/"), Qt::CaseInsensitive))
+        return normalizedLookupKey;
+
+    return QStringLiteral("serie/") + normalizedLookupKey;
+}
+
+bool parseSeriesEpisodeTitle(const QString &title,
+                             QString *seriesName,
+                             QString *seriesFileName,
+                             int *season,
+                             int *episode)
 {
     static const QRegularExpression episodePattern(
         QStringLiteral("(\\d{1,2})x(\\d{2})"),
@@ -81,7 +141,8 @@ bool parseSeriesEpisodeTitle(const QString &title, QString *seriesName, int *sea
         return false;
 
     const QString searchName = seriesSearchNameFromTitle(title, match.capturedStart());
-    if (searchName.isEmpty())
+    const QString fileNameKey = seriesFileNameKeyFromTitle(title, match.capturedStart());
+    if (searchName.isEmpty() || fileNameKey.isEmpty())
         return false;
 
     bool seasonOk = false;
@@ -93,6 +154,8 @@ bool parseSeriesEpisodeTitle(const QString &title, QString *seriesName, int *sea
 
     if (seriesName)
         *seriesName = searchName;
+    if (seriesFileName)
+        *seriesFileName = fileNameKey;
     if (season)
         *season = parsedSeason;
     if (episode)
@@ -1093,15 +1156,23 @@ void AppController::quitApplication()
 
 bool AppController::requestCurrentBrowserEpisodeInfo()
 {
+    const QString episodeInfoHost = configuredEpisodeInfoHost();
+    if (episodeInfoHost.isEmpty())
+        return false;
+
     SeriesEpisodeRequest episodeRequest;
     if (!currentSeriesEpisodeRequest(&episodeRequest)) {
         qDebug() << "[EpisodeInfo] Kein abrufbares Serienvideo ausgewaehlt.";
         return false;
     }
 
+    episodeRequest.episodeInfoHost = episodeInfoHost;
+
     const int requestId = ++m_browserEpisodeInfoRequestId;
     qDebug() << "[EpisodeInfo] Start request" << requestId
              << "seriesName=" << episodeRequest.seriesName
+             << "seriesFileName=" << episodeRequest.seriesFileName
+             << "episodeInfoHost=" << episodeRequest.episodeInfoHost
              << "season=" << episodeRequest.season
              << "episode=" << episodeRequest.episode;
     setBrowserEpisodeInfoState(
@@ -1111,6 +1182,19 @@ bool AppController::requestCurrentBrowserEpisodeInfo()
         QString(),
         episodeRequest.coverSource,
         true);
+
+    const QString configuredLookupKey =
+        configuredEpisodeLookupKeyForSeriesFileName(episodeRequest.seriesFileName);
+    if (!configuredLookupKey.isEmpty()) {
+        const QString showPath = episodeInfoShowPathFromLookupKey(configuredLookupKey);
+        qDebug() << "[EpisodeInfo] Konfigurierter Lookup-Key gefunden"
+                 << "seriesFileName=" << episodeRequest.seriesFileName
+                 << "lookupKey=" << configuredLookupKey
+                 << "showPath=" << showPath;
+        requestEpisodeInfoPage(requestId, episodeRequest, showPath);
+        return true;
+    }
+
     requestShowSuggestion(requestId, episodeRequest);
     return true;
 }
@@ -1272,6 +1356,7 @@ bool AppController::currentSeriesEpisodeRequest(SeriesEpisodeRequest *request) c
     if (!parseSeriesEpisodeTitle(
             title,
             &parsedRequest.seriesName,
+            &parsedRequest.seriesFileName,
             &parsedRequest.season,
             &parsedRequest.episode)) {
         qDebug() << "[EpisodeInfo] Kein Serienfolgen-Muster im Titel gefunden:" << title;
@@ -1289,6 +1374,7 @@ bool AppController::currentSeriesEpisodeRequest(SeriesEpisodeRequest *request) c
     qDebug() << "[EpisodeInfo] Titel geparst"
              << "sourceTitle=" << title
              << "seriesName=" << parsedRequest.seriesName
+             << "seriesFileName=" << parsedRequest.seriesFileName
              << "season=" << parsedRequest.season
              << "episode=" << parsedRequest.episode
              << "episodeCode=" << seasonEpisodeCode(parsedRequest.season, parsedRequest.episode);
@@ -1299,12 +1385,54 @@ bool AppController::currentSeriesEpisodeRequest(SeriesEpisodeRequest *request) c
     return true;
 }
 
+QString AppController::configuredEpisodeInfoHost() const
+{
+    if (!m_database)
+        return {};
+
+    return normalizedEpisodeInfoHost(
+        m_database->loadConfigString(
+            AppConfig::episodeInfoHostKey(),
+            AppConfig::defaultEpisodeInfoHost()));
+}
+
+QString AppController::configuredEpisodeLookupKeyForSeriesFileName(const QString &seriesFileName) const
+{
+    if (!m_database)
+        return {};
+
+    const QString normalizedRequestedName = normalizedSeriesFileNameKey(seriesFileName);
+    if (normalizedRequestedName.isEmpty())
+        return {};
+
+    const QJsonArray configuredLookups = m_database->loadConfigArray(
+        AppConfig::episodeInfoLookupKeysKey(),
+        AppConfig::defaultEpisodeInfoLookupKeysArray());
+
+    for (const QJsonValue &entry : configuredLookups) {
+        if (!entry.isObject())
+            continue;
+
+        const QJsonObject lookupObject = entry.toObject();
+        const QString configuredSeriesFileName = normalizedSeriesFileNameKey(
+            lookupObject.value(QStringLiteral("seriesFileName")).toString());
+        if (configuredSeriesFileName.compare(normalizedRequestedName, Qt::CaseInsensitive) != 0)
+            continue;
+
+        const QString lookupKey =
+            lookupObject.value(QStringLiteral("lookupKey")).toString().trimmed();
+        if (!lookupKey.isEmpty())
+            return lookupKey;
+    }
+
+    return {};
+}
+
 void AppController::requestShowSuggestion(int requestId, const SeriesEpisodeRequest &episodeRequest)
 {
     QUrl url;
     url.setScheme(QStringLiteral("https"));
-    // url.setHost(QStringLiteral("websocket.bplaced.net"));
-    url.setHost(QStringLiteral("s.to"));
+    url.setHost(episodeRequest.episodeInfoHost);
     url.setPath(QStringLiteral("/api/search/suggest"));
 
     QUrlQuery query;
@@ -1402,8 +1530,7 @@ void AppController::requestEpisodeInfoPage(int requestId, const SeriesEpisodeReq
 
     QUrl url;
     url.setScheme(QStringLiteral("https"));
-    // url.setHost(QStringLiteral("websocket.bplaced.net"));
-    url.setHost(QStringLiteral("s.to"));
+    url.setHost(episodeRequest.episodeInfoHost);
     url.setPath(QStringLiteral("/") + showPath
                 + QStringLiteral("/staffel-%1/episode-%2")
                       .arg(episodeRequest.season)
