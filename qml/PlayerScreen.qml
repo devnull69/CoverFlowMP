@@ -13,6 +13,7 @@ Item {
     property bool clearSkipDialogVisible: false
     property int clearSkipChoiceIndex: 1 // 0 = JA, 1 = NEIN
     property int skipImportChoiceIndex: 0 // 0 = JA, 1 = NEIN
+    property bool nextEpisodeButtonVisible: false
     readonly property int audioDelayStepMs: 50
     readonly property int audioDelayMaxMs: 2000
 
@@ -47,6 +48,45 @@ Item {
             playerController.seekRelative(seconds)
     }
 
+    function canShowNextEpisodeButton() {
+        return appController.playerNextEpisodeAvailable
+                && !playerController.paused
+                && !root.infoMode
+                && !root.audioDelayMode
+                && !root.messageDialogVisible
+                && !root.clearSkipDialogVisible
+                && !appController.resumePromptVisible
+                && !appController.skipImportPromptVisible
+    }
+
+    function hideNextEpisodeButton() {
+        root.nextEpisodeButtonVisible = false
+        nextEpisodeButtonTimer.stop()
+    }
+
+    function showNextEpisodeButton() {
+        if (!root.canShowNextEpisodeButton())
+            return false
+
+        root.nextEpisodeButtonVisible = true
+        nextEpisodeButtonTimer.restart()
+        return true
+    }
+
+    function playNextEpisodeFromButton() {
+        root.hideNextEpisodeButton()
+        appController.playNextEpisode()
+    }
+
+    function confirmNextEpisodeButton(event) {
+        if (!root.nextEpisodeButtonVisible || !root.canShowNextEpisodeButton())
+            return false
+
+        root.playNextEpisodeFromButton()
+        event.accepted = true
+        return true
+    }
+
     Component.onCompleted: {
         Window.window.visibility = Window.FullScreen
         forceActiveFocus()
@@ -60,6 +100,7 @@ Item {
             audioDelayMode = false
             infoMode = false
             clearSkipDialogVisible = false
+            nextEpisodeButtonVisible = false
             skipImportChoiceIndex = 0
         }
     }
@@ -73,9 +114,49 @@ Item {
         }
     }
 
+    Timer {
+        id: nextEpisodeButtonTimer
+        interval: 5000
+        repeat: false
+        onTriggered: root.nextEpisodeButtonVisible = false
+    }
+
     Rectangle {
         anchors.fill: parent
         color: "black"
+    }
+
+    Window {
+        id: nextEpisodeOverlayWindow
+        visible: root.visible
+                 && root.nextEpisodeButtonVisible
+                 && root.canShowNextEpisodeButton()
+                 && root.Window.window
+                 && root.Window.window.active
+        transientParent: root.Window.window
+        flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
+        color: "transparent"
+
+        x: root.Window.window ? root.Window.window.x : 0
+        y: root.Window.window ? root.Window.window.y : 0
+        width: root.width
+        height: root.height
+
+        readonly property int buttonMargin: Math.max(28, height * 0.055)
+
+        PlaybackActionButton {
+            id: nextEpisodeButton
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: nextEpisodeOverlayWindow.buttonMargin
+            anchors.bottomMargin: nextEpisodeOverlayWindow.buttonMargin
+            width: Math.min(parent.width - nextEpisodeOverlayWindow.buttonMargin * 2,
+                            Math.max(320, parent.width * 0.30))
+            height: Math.max(42, Math.min(58, root.height * 0.058))
+            text: "Nächste Folge abspielen"
+            iconName: "playNext"
+            onClicked: root.playNextEpisodeFromButton()
+        }
     }
 
     Window {
@@ -368,16 +449,24 @@ Item {
     Connections {
         target: appController
         function onResumePromptVisibleChanged() {
+            root.hideNextEpisodeButton()
             if (appController.resumePromptVisible)
                 root.resumeChoiceIndex = 0
         }
 
         function onSkipImportPromptVisibleChanged() {
+            root.hideNextEpisodeButton()
             if (appController.skipImportPromptVisible)
                 root.skipImportChoiceIndex = 0
         }
 
+        function onPlayerNextEpisodeChanged() {
+            if (!appController.playerNextEpisodeAvailable)
+                root.hideNextEpisodeButton()
+        }
+
         function onPlayerMessageChanged() {
+            root.hideNextEpisodeButton()
             root.messageDialogVisible = appController.playerMessage !== ""
             root.forceActiveFocus()
         }
@@ -386,6 +475,7 @@ Item {
     Connections {
         target: playerController
         function onPausedChanged() {
+            root.hideNextEpisodeButton()
             if (playerController.paused) {
                 root.infoMode = false
             } else {
@@ -515,6 +605,9 @@ Item {
     }
 
     Keys.onReturnPressed: function(event) {
+        if (root.confirmNextEpisodeButton(event))
+            return
+
         if (root.infoMode) {
             event.accepted = true
             return
@@ -543,6 +636,9 @@ Item {
     }
 
     Keys.onEnterPressed: function(event) {
+        if (root.confirmNextEpisodeButton(event))
+            return
+
         if (root.infoMode) {
             event.accepted = true
             return
@@ -571,9 +667,16 @@ Item {
     }
 
     Keys.onPressed: function(event) {
+        if (event.key === Qt.Key_Shift) {
+            if (root.showNextEpisodeButton())
+                event.accepted = true
+            return
+        }
+
         if (event.key === Qt.Key_Y && !playerController.paused && !root.audioDelayMode
                 && !appController.resumePromptVisible && !appController.skipImportPromptVisible
                 && !root.clearSkipDialogVisible && !root.messageDialogVisible) {
+            root.hideNextEpisodeButton()
             root.infoMode = !root.infoMode
             event.accepted = true
             return

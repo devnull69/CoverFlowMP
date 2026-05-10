@@ -30,6 +30,7 @@ class AppController : public QObject
     Q_PROPERTY(bool fastMode READ fastMode NOTIFY fastModeChanged)
     Q_PROPERTY(bool skipImportPromptVisible READ skipImportPromptVisible NOTIFY skipImportPromptVisibleChanged)
     Q_PROPERTY(bool canNavigateUp READ canNavigateUp NOTIFY currentIndexChanged)
+    Q_PROPERTY(bool playerNextEpisodeAvailable READ playerNextEpisodeAvailable NOTIFY playerNextEpisodeChanged)
     Q_PROPERTY(QString browserEpisodeInfoTitle READ browserEpisodeInfoTitle NOTIFY browserEpisodeInfoChanged)
     Q_PROPERTY(QString browserEpisodeInfoDescription READ browserEpisodeInfoDescription NOTIFY browserEpisodeInfoChanged)
     Q_PROPERTY(QString browserEpisodeInfoSeriesTitle READ browserEpisodeInfoSeriesTitle NOTIFY browserEpisodeInfoChanged)
@@ -56,6 +57,7 @@ public:
     bool fastMode() const;
     bool skipImportPromptVisible() const;
     bool canNavigateUp() const;
+    bool playerNextEpisodeAvailable() const;
     QString browserEpisodeInfoTitle() const;
     QString browserEpisodeInfoDescription() const;
     QString browserEpisodeInfoSeriesTitle() const;
@@ -84,6 +86,7 @@ public:
     Q_INVOKABLE void navigateUpOrQuit();
     Q_INVOKABLE bool canOpenBrowserActionDialog() const;
     Q_INVOKABLE void quitApplication();
+    Q_INVOKABLE void playNextEpisode();
     Q_INVOKABLE bool requestCurrentBrowserEpisodeInfo();
     Q_INVOKABLE void clearBrowserEpisodeInfo();
 
@@ -96,6 +99,7 @@ signals:
     void playerMessageChanged();
     void fastModeChanged();
     void skipImportPromptVisibleChanged();
+    void playerNextEpisodeChanged();
     void browserEpisodeInfoChanged();
 
 private:
@@ -121,6 +125,9 @@ private:
     void setPlayerMessage(const QString &message);
     void setPlayerCursorHidden(bool hidden);
     void startPlayback(double startPosition);
+    QString findNextEpisodeFilePath(const QString &filePath) const;
+    int indexOfVideoFilePath(const QString &filePath) const;
+    void refreshPlayerNextEpisode();
     bool shouldPromptForSkipImport(const QString &filePath) const;
     void setSkipImportPromptVisible(bool visible);
     void queueMissingThumbnails(const QVector<VideoItem> &items, quint64 generation);
@@ -167,6 +174,7 @@ private:
     QThreadPool m_thumbnailThreadPool;
     QNetworkAccessManager m_episodeInfoNetworkManager;
     QVector<ConfiguredFolderEntry> m_configuredFolders;
+    QString m_playerNextEpisodeFilePath;
     QString m_browserEpisodeInfoSeriesTitle;
     QString m_browserEpisodeInfoSeasonEpisode;
     QString m_browserEpisodeInfoTitle;

@@ -1,4 +1,4 @@
-coverflowmp (2.0.7) UNRELEASED; urgency=medium
+coverflowmp (2.0.8) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -35,5 +35,6 @@ coverflowmp (2.0.7) UNRELEASED; urgency=medium
   * INFO-Modus added with key Y
   * Episode info added with key I
   * Episode info added to configuration. Added play button to sidebar
+  * PLAY NEXT EPISODE button added to episode video
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Tue, 05 May 2026 23:49:09 +0200
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Sun, 10 May 2026 21:18:31 +0200

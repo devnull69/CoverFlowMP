@@ -87,6 +87,8 @@ Im Play-Modus läuft das Video normal.
 
 - `Leertaste`: Pause ein/aus
 - `B`: Zurück zum Browser
+- `Shift`: Bei Serienfolgen mit vorhandener Nachfolge den Button `Nächste Folge abspielen` einblenden
+- `Enter`: Bei eingeblendetem Button zur nächsten Folge wechseln
 
 ### Springen
 

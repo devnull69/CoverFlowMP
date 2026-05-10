@@ -50,6 +50,14 @@ QString normalizedFolderPath(const QString &path)
     return QDir(expandUserPath(path)).absolutePath();
 }
 
+bool isVideoFileSuffix(const QString &suffix)
+{
+    const QString normalizedSuffix = suffix.toLower();
+    return normalizedSuffix == QStringLiteral("mp4")
+           || normalizedSuffix == QStringLiteral("mkv")
+           || normalizedSuffix == QStringLiteral("avi");
+}
+
 bool isSameOrChildPath(const QString &rootPath, const QString &candidatePath)
 {
     if (rootPath.isEmpty() || candidatePath.isEmpty())
@@ -457,6 +465,11 @@ bool AppController::canNavigateUp() const
     return m_libraryModel->itemAt(0).isParentFolder;
 }
 
+bool AppController::playerNextEpisodeAvailable() const
+{
+    return !m_playerNextEpisodeFilePath.isEmpty();
+}
+
 QString AppController::browserEpisodeInfoTitle() const
 {
     return m_browserEpisodeInfoTitle;
@@ -700,6 +713,7 @@ void AppController::playSelected(int index)
     m_playerController->setSkipRanges(
         m_fastMode ? QVector<SkipRange>() : m_database->loadSkipRanges(item.filePath));
     emit currentVideoNameChanged();
+    refreshPlayerNextEpisode();
 
     const double loadedResume = m_database->loadPosition(item.filePath);
     const double resumePosition = std::isfinite(loadedResume) ? std::max(0.0, loadedResume) : 0.0;
@@ -1070,6 +1084,7 @@ void AppController::closePlayer(bool saveResumePosition)
     }
 
     m_currentFilePath.clear();
+    refreshPlayerNextEpisode();
     m_playerController->stop();
     m_playerController->setSkipHandlingEnabled(!m_fastMode);
     m_playerController->setSkipRanges({});
@@ -1154,6 +1169,49 @@ void AppController::quitApplication()
     QCoreApplication::quit();
 }
 
+void AppController::playNextEpisode()
+{
+    if (!m_playerVisible || m_currentFilePath.isEmpty())
+        return;
+
+    const QString nextFilePath = m_playerNextEpisodeFilePath.isEmpty()
+        ? findNextEpisodeFilePath(m_currentFilePath)
+        : m_playerNextEpisodeFilePath;
+    if (nextFilePath.isEmpty() || !QFileInfo::exists(nextFilePath)) {
+        refreshPlayerNextEpisode();
+        return;
+    }
+
+    const QString previousFilePath = m_currentFilePath;
+    if (m_database && !previousFilePath.isEmpty()) {
+        m_database->deletePosition(previousFilePath);
+        m_libraryModel->updatePlaybackState(previousFilePath, 0.0, 0.0, 0.0);
+    }
+
+    m_playerController->stop();
+    setSkipImportPromptVisible(false);
+
+    const int nextIndex = indexOfVideoFilePath(nextFilePath);
+    if (nextIndex >= 0 && m_currentIndex != nextIndex) {
+        m_currentIndex = nextIndex;
+        emit currentIndexChanged();
+    }
+
+    m_currentFilePath = nextFilePath;
+    m_currentVideoName = QFileInfo(nextFilePath).completeBaseName();
+    m_currentAudioDelay = m_database ? m_database->loadAudioDelay(nextFilePath) : 0.0;
+    m_playerController->setSkipHandlingEnabled(!m_fastMode);
+    m_playerController->setSkipRanges(
+        m_fastMode || !m_database
+            ? QVector<SkipRange>()
+            : m_database->loadSkipRanges(nextFilePath));
+    emit currentVideoNameChanged();
+    refreshPlayerNextEpisode();
+    setPlayerMessage(QString());
+
+    startPlayback(0.0);
+}
+
 bool AppController::requestCurrentBrowserEpisodeInfo()
 {
     const QString episodeInfoHost = configuredEpisodeInfoHost();
@@ -1213,6 +1271,96 @@ void AppController::setPlayerMessage(const QString &message)
 
     m_playerMessage = message;
     emit playerMessageChanged();
+}
+
+QString AppController::findNextEpisodeFilePath(const QString &filePath) const
+{
+    if (filePath.isEmpty())
+        return {};
+
+    const QFileInfo currentFileInfo(filePath);
+    QString currentSeriesFileName;
+    int currentSeason = 0;
+    int currentEpisode = 0;
+    if (!parseSeriesEpisodeTitle(
+            currentFileInfo.completeBaseName(),
+            nullptr,
+            &currentSeriesFileName,
+            &currentSeason,
+            &currentEpisode)) {
+        return {};
+    }
+
+    const QDir currentDir(currentFileInfo.absolutePath());
+    const QFileInfoList files = currentDir.entryInfoList(
+        QDir::Files | QDir::NoDotAndDotDot,
+        QDir::Name);
+
+    QString sameSeasonNextPath;
+    QString nextSeasonFirstPath;
+
+    for (const QFileInfo &candidateInfo : files) {
+        if (!candidateInfo.isFile() || !isVideoFileSuffix(candidateInfo.suffix()))
+            continue;
+
+        if (candidateInfo.absoluteFilePath() == currentFileInfo.absoluteFilePath())
+            continue;
+
+        QString candidateSeriesFileName;
+        int candidateSeason = 0;
+        int candidateEpisode = 0;
+        if (!parseSeriesEpisodeTitle(
+                candidateInfo.completeBaseName(),
+                nullptr,
+                &candidateSeriesFileName,
+                &candidateSeason,
+                &candidateEpisode)) {
+            continue;
+        }
+
+        if (candidateSeriesFileName.compare(currentSeriesFileName, Qt::CaseInsensitive) != 0)
+            continue;
+
+        if (candidateSeason == currentSeason && candidateEpisode == currentEpisode + 1) {
+            sameSeasonNextPath = candidateInfo.absoluteFilePath();
+            break;
+        }
+
+        if (nextSeasonFirstPath.isEmpty()
+            && candidateSeason == currentSeason + 1
+            && candidateEpisode == 1) {
+            nextSeasonFirstPath = candidateInfo.absoluteFilePath();
+        }
+    }
+
+    return sameSeasonNextPath.isEmpty() ? nextSeasonFirstPath : sameSeasonNextPath;
+}
+
+int AppController::indexOfVideoFilePath(const QString &filePath) const
+{
+    if (!m_libraryModel || filePath.isEmpty())
+        return -1;
+
+    const QString absoluteFilePath = QFileInfo(filePath).absoluteFilePath();
+    for (int i = 0; i < m_libraryModel->rowCount(); ++i) {
+        const VideoItem item = m_libraryModel->itemAt(i);
+        if (!item.isFolder
+            && QFileInfo(item.filePath).absoluteFilePath() == absoluteFilePath) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+void AppController::refreshPlayerNextEpisode()
+{
+    const QString nextEpisodeFilePath = findNextEpisodeFilePath(m_currentFilePath);
+    if (m_playerNextEpisodeFilePath == nextEpisodeFilePath)
+        return;
+
+    m_playerNextEpisodeFilePath = nextEpisodeFilePath;
+    emit playerNextEpisodeChanged();
 }
 
 bool AppController::shouldPromptForSkipImport(const QString &filePath) const

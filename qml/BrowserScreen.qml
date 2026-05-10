@@ -559,50 +559,13 @@ Item {
                                 asynchronous: true
                             }
 
-                            Rectangle {
+                            PlaybackActionButton {
                                 id: episodeInfoPlayButton
                                 width: episodeInfoCoverImage.width
                                 height: Math.max(42, Math.min(58, root.height * 0.058))
-                                radius: Math.max(6, height * 0.16)
-                                color: episodeInfoPlayMouseArea.pressed ? "#DADADA" : "#F7F7F7"
-
-                                Row {
-                                    anchors.centerIn: parent
-                                    spacing: Math.max(8, parent.width * 0.06)
-
-                                    Canvas {
-                                        id: episodeInfoPlayIcon
-                                        width: Math.max(14, Math.min(20, episodeInfoPlayButton.height * 0.34))
-                                        height: width
-                                        anchors.verticalCenter: parent.verticalCenter
-
-                                        onPaint: {
-                                            var ctx = getContext("2d")
-                                            ctx.clearRect(0, 0, width, height)
-                                            ctx.fillStyle = "#000000"
-                                            ctx.beginPath()
-                                            ctx.moveTo(width * 0.20, height * 0.08)
-                                            ctx.lineTo(width * 0.20, height * 0.92)
-                                            ctx.lineTo(width * 0.88, height * 0.50)
-                                            ctx.closePath()
-                                            ctx.fill()
-                                        }
-                                    }
-
-                                    Text {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        text: "Abspielen"
-                                        color: "black"
-                                        font.bold: true
-                                        font.pixelSize: Math.max(15, Math.min(20, episodeInfoPlayButton.height * 0.36))
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: episodeInfoPlayMouseArea
-                                    anchors.fill: parent
-                                    onClicked: root.playCurrentFromEpisodeInfoSidebar()
-                                }
+                                text: "Abspielen"
+                                iconName: "play"
+                                onClicked: root.playCurrentFromEpisodeInfoSidebar()
                             }
                         }
                     }
