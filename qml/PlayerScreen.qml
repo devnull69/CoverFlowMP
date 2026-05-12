@@ -667,7 +667,7 @@ Item {
     }
 
     Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Shift) {
+        if (event.key === Qt.Key_Control) {
             if (root.showNextEpisodeButton())
                 event.accepted = true
             return
