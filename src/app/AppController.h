@@ -120,6 +120,7 @@ private:
     double browserDurationForFile(const QString &filePath, double storedDuration) const;
     void refreshBrowserDurations();
     void queueMissingDurations(const QVector<VideoItem> &items, quint64 generation);
+    void saveCurrentPlaybackState(const QString &filePath);
     void closePlayer(bool saveResumePosition);
     void handlePlaybackFinished();
     void setPlayerMessage(const QString &message);

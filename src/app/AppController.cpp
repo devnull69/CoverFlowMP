@@ -1058,30 +1058,35 @@ void AppController::decideResumePlayback(bool continueFromSavedPosition)
     startPlayback(startPosition);
 }
 
+void AppController::saveCurrentPlaybackState(const QString &filePath)
+{
+    if (filePath.isEmpty() || !m_database || !m_libraryModel || !m_playerController)
+        return;
+
+    const double pos = m_playerController->position();
+    const double dur = m_playerController->duration();
+    double savePos = std::max(0.0, pos);
+    if (dur > 0.0)
+        savePos = std::min(savePos, dur);
+
+    m_database->savePosition(
+        filePath,
+        savePos,
+        dur,
+        m_playerController->audioDelay());
+    m_libraryModel->updatePlaybackState(
+        filePath,
+        savePos,
+        browserDurationForFile(filePath, dur),
+        dur);
+}
+
 void AppController::closePlayer(bool saveResumePosition)
 {
     const QString currentFilePath = m_currentFilePath;
 
-    if (saveResumePosition && !m_resumePromptVisible) {
-        const double pos = m_playerController->position();
-        const double dur = m_playerController->duration();
-        double savePos = std::max(0.0, pos);
-        if (dur > 0.0)
-            savePos = std::min(savePos, dur);
-
-        if (!currentFilePath.isEmpty()) {
-            m_database->savePosition(
-                currentFilePath,
-                savePos,
-                dur,
-                m_playerController->audioDelay());
-            m_libraryModel->updatePlaybackState(
-                currentFilePath,
-                savePos,
-                browserDurationForFile(currentFilePath, dur),
-                dur);
-        }
-    }
+    if (saveResumePosition && !m_resumePromptVisible)
+        saveCurrentPlaybackState(currentFilePath);
 
     m_currentFilePath.clear();
     refreshPlayerNextEpisode();
@@ -1183,10 +1188,7 @@ void AppController::playNextEpisode()
     }
 
     const QString previousFilePath = m_currentFilePath;
-    if (m_database && !previousFilePath.isEmpty()) {
-        m_database->deletePosition(previousFilePath);
-        m_libraryModel->updatePlaybackState(previousFilePath, 0.0, 0.0, 0.0);
-    }
+    saveCurrentPlaybackState(previousFilePath);
 
     m_playerController->stop();
     setSkipImportPromptVisible(false);
