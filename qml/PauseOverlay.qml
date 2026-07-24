@@ -9,6 +9,7 @@ Item {
     property double audioDelay: 0
     property bool audioDelayMode: false
     property var skipRanges: []
+    property int selectedSkipRangeIndex: -1
     property bool skipRangePending: false
     property double pendingSkipStart: 0
     property string currentClockText: ""
@@ -195,7 +196,7 @@ Item {
                                 x: startX
                                 width: Math.max(2, endX - startX)
                                 height: parent.height
-                                color: "#C92A2A"
+                                color: index === root.selectedSkipRangeIndex ? "#F28C18" : "#C92A2A"
                                 radius: parent.radius
                                 opacity: 0.95
                             }

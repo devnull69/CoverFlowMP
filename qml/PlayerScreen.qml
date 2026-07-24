@@ -13,6 +13,7 @@ Item {
     property bool clearSkipDialogVisible: false
     property int clearSkipChoiceIndex: 1 // 0 = JA, 1 = NEIN
     property int skipImportChoiceIndex: 0 // 0 = JA, 1 = NEIN
+    property int selectedSkipRangeIndex: -1
     property bool nextEpisodeButtonVisible: false
     readonly property int audioDelayStepMs: 50
     readonly property int audioDelayMaxMs: 2000
@@ -46,6 +47,24 @@ Item {
             playerController.seekRelativeClamped(seconds)
         else
             playerController.seekRelative(seconds)
+    }
+
+    function selectSkipRange(direction) {
+        var count = playerController.skipRanges.length
+        if (count <= 0) {
+            root.selectedSkipRangeIndex = -1
+            return
+        }
+
+        if (root.selectedSkipRangeIndex < 0
+                || root.selectedSkipRangeIndex >= count) {
+            root.selectedSkipRangeIndex = direction < 0 ? count - 1 : 0
+            return
+        }
+
+        root.selectedSkipRangeIndex = Math.max(
+                    0,
+                    Math.min(count - 1, root.selectedSkipRangeIndex + direction))
     }
 
     function canShowNextEpisodeButton() {
@@ -102,6 +121,7 @@ Item {
             clearSkipDialogVisible = false
             nextEpisodeButtonVisible = false
             skipImportChoiceIndex = 0
+            selectedSkipRangeIndex = -1
         }
     }
 
@@ -182,6 +202,7 @@ Item {
             audioDelay: playerController.audioDelay
             audioDelayMode: root.audioDelayMode
             skipRanges: appController.fastMode ? [] : playerController.skipRanges
+            selectedSkipRangeIndex: root.selectedSkipRangeIndex
             skipRangePending: appController.fastMode ? false : playerController.skipRangePending
             pendingSkipStart: playerController.pendingSkipStart
         }
@@ -470,6 +491,10 @@ Item {
             root.messageDialogVisible = appController.playerMessage !== ""
             root.forceActiveFocus()
         }
+
+        function onFastModeChanged() {
+            root.selectedSkipRangeIndex = -1
+        }
     }
 
     Connections {
@@ -480,7 +505,12 @@ Item {
                 root.infoMode = false
             } else {
                 root.audioDelayMode = false
+                root.selectedSkipRangeIndex = -1
             }
+        }
+
+        function onSkipRangesChanged() {
+            root.selectedSkipRangeIndex = -1
         }
     }
 
@@ -761,6 +791,20 @@ Item {
         if (playerController.paused && !root.audioDelayMode && !appController.fastMode
                 && event.key === Qt.Key_C) {
             playerController.clearPendingSkipRange()
+            event.accepted = true
+            return
+        }
+
+        if (playerController.paused && !root.audioDelayMode && !appController.fastMode
+                && (event.key === Qt.Key_Comma || event.key === Qt.Key_Period)) {
+            root.selectSkipRange(event.key === Qt.Key_Comma ? -1 : 1)
+            event.accepted = true
+            return
+        }
+
+        if (playerController.paused && !root.audioDelayMode && !appController.fastMode
+                && event.key === Qt.Key_Delete && root.selectedSkipRangeIndex >= 0) {
+            playerController.deleteSkipRange(root.selectedSkipRangeIndex)
             event.accepted = true
             return
         }

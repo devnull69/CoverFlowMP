@@ -43,6 +43,7 @@ public:
     Q_INVOKABLE void jumpToLastFrame();
     Q_INVOKABLE void markSkipBoundary();
     Q_INVOKABLE void clearPendingSkipRange();
+    Q_INVOKABLE bool deleteSkipRange(int index);
     Q_INVOKABLE void stop();
     Q_INVOKABLE void attachToWindow(QObject *windowObject);
     Q_INVOKABLE void setAudioDelay(double seconds);

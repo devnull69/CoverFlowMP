@@ -211,6 +211,18 @@ void PlayerController::clearPendingSkipRange()
     emitSkipRangeState();
 }
 
+bool PlayerController::deleteSkipRange(int index)
+{
+    if (!m_paused || !m_skipHandlingEnabled
+        || index < 0 || index >= m_skipRanges.size()) {
+        return false;
+    }
+
+    m_skipRanges.removeAt(index);
+    emit skipRangesChanged();
+    return true;
+}
+
 void PlayerController::stop()
 {
     m_skipJumpInProgress = false;

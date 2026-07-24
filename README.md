@@ -156,7 +156,9 @@ Wenn fuer ein Video noch keine Skip-Bereiche gespeichert sind, aber im gleichen 
 - `S`: Skip-Bereich setzen
   Beim ersten Druck wird der Startpunkt gesetzt, beim zweiten Druck der Endpunkt.
 - `C`: Einen begonnenen, aber noch nicht abgeschlossenen Skip-Bereich verwerfen
-- `Entf` / `Backspace`: Alle gespeicherten Skip-Bereiche dieses Videos löschen, nach Sicherheitsabfrage
+- `,` / `.`: Einen Skip-Bereich nach links bzw. rechts auswählen; der ausgewählte Bereich wird orange dargestellt
+- `Entf`: Den ausgewählten Skip-Bereich löschen
+- `Entf` ohne Auswahl / `Backspace`: Alle gespeicherten Skip-Bereiche dieses Videos löschen, nach Sicherheitsabfrage
 - `X`: Skip-Bereiche dieses Videos als Datei exportieren
 - `I`: Skip-Bereiche dieses Videos importieren
 
