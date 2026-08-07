@@ -16,6 +16,8 @@ class PlayerController : public QObject
     Q_PROPERTY(double position READ position NOTIFY positionChanged)
     Q_PROPERTY(double duration READ duration NOTIFY durationChanged)
     Q_PROPERTY(double audioDelay READ audioDelay NOTIFY audioDelayChanged)
+    Q_PROPERTY(bool subtitlesAvailable READ subtitlesAvailable NOTIFY subtitlesAvailableChanged)
+    Q_PROPERTY(bool subtitlesVisible READ subtitlesVisible NOTIFY subtitlesVisibleChanged)
     Q_PROPERTY(QVariantList skipRanges READ skipRanges NOTIFY skipRangesChanged)
     Q_PROPERTY(bool skipRangePending READ skipRangePending NOTIFY skipRangePendingChanged)
     Q_PROPERTY(double pendingSkipStart READ pendingSkipStart NOTIFY pendingSkipStartChanged)
@@ -28,6 +30,8 @@ public:
     double position() const;
     double duration() const;
     double audioDelay() const;
+    bool subtitlesAvailable() const;
+    bool subtitlesVisible() const;
     QVariantList skipRanges() const;
     bool skipRangePending() const;
     double pendingSkipStart() const;
@@ -47,6 +51,8 @@ public:
     Q_INVOKABLE void stop();
     Q_INVOKABLE void attachToWindow(QObject *windowObject);
     Q_INVOKABLE void setAudioDelay(double seconds);
+    Q_INVOKABLE void disableSubtitles();
+    Q_INVOKABLE void setSubtitlesRaised(bool raised);
     void setSkipRanges(const QVector<SkipRange> &ranges);
     void setSkipHandlingEnabled(bool enabled);
 
@@ -55,6 +61,8 @@ signals:
     void positionChanged();
     void durationChanged();
     void audioDelayChanged();
+    void subtitlesAvailableChanged();
+    void subtitlesVisibleChanged();
     void playbackFinished();
     void skipRangesChanged();
     void skipRangePendingChanged();

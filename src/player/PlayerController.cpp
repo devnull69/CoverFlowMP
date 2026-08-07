@@ -43,6 +43,11 @@ PlayerController::PlayerController(QObject *parent)
         emit audioDelayChanged();
     });
 
+    connect(m_mpv, &MpvObject::subtitlesAvailableChanged,
+            this, &PlayerController::subtitlesAvailableChanged);
+    connect(m_mpv, &MpvObject::subtitlesVisibleChanged,
+            this, &PlayerController::subtitlesVisibleChanged);
+
     connect(m_mpv, &MpvObject::playbackFinished, this, [this]() {
         m_playbackFinishedPending = false;
         emit playbackFinished();
@@ -67,6 +72,16 @@ double PlayerController::duration() const
 double PlayerController::audioDelay() const
 {
     return m_audioDelay;
+}
+
+bool PlayerController::subtitlesAvailable() const
+{
+    return m_mpv->subtitlesAvailable();
+}
+
+bool PlayerController::subtitlesVisible() const
+{
+    return m_mpv->subtitlesVisible();
 }
 
 QVariantList PlayerController::skipRanges() const
@@ -236,6 +251,16 @@ void PlayerController::stop()
 void PlayerController::setAudioDelay(double seconds)
 {
     m_mpv->setAudioDelay(seconds);
+}
+
+void PlayerController::disableSubtitles()
+{
+    m_mpv->disableSubtitles();
+}
+
+void PlayerController::setSubtitlesRaised(bool raised)
+{
+    m_mpv->setSubtitlesRaised(raised);
 }
 
 void PlayerController::attachToWindow(QObject *windowObject)

@@ -42,6 +42,10 @@ Item {
         playerController.setAudioDelay(nextMs / 1000.0)
     }
 
+    function updateSubtitlePosition() {
+        playerController.setSubtitlesRaised(playerController.paused || root.audioDelayMode)
+    }
+
     function seekBy(seconds) {
         if (playerController.paused)
             playerController.seekRelativeClamped(seconds)
@@ -124,6 +128,8 @@ Item {
             selectedSkipRangeIndex = -1
         }
     }
+
+    onAudioDelayModeChanged: updateSubtitlePosition()
 
     Connections {
         target: root.Window.window
@@ -501,6 +507,7 @@ Item {
         target: playerController
         function onPausedChanged() {
             root.hideNextEpisodeButton()
+            root.updateSubtitlePosition()
             if (playerController.paused) {
                 root.infoMode = false
             } else {
@@ -700,6 +707,14 @@ Item {
         if (event.key === Qt.Key_Control) {
             if (root.showNextEpisodeButton())
                 event.accepted = true
+            return
+        }
+
+        if (event.key === Qt.Key_U && !root.infoMode
+                && !appController.resumePromptVisible && !appController.skipImportPromptVisible
+                && !root.clearSkipDialogVisible && !root.messageDialogVisible) {
+            playerController.disableSubtitles()
+            event.accepted = true
             return
         }
 

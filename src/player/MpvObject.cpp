@@ -1,5 +1,6 @@
 #include "MpvObject.h"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QtGlobal>
 
@@ -37,6 +38,16 @@ bool MpvObject::ensureInitialized()
     mpv_set_option_string(m_mpv, "keep-open", "no");
     mpv_set_option_string(m_mpv, "input-default-bindings", "no");
     mpv_set_option_string(m_mpv, "input-vo-keyboard", "no");
+    mpv_set_option_string(m_mpv, "sub-auto", "no");
+    mpv_set_option_string(m_mpv, "sub-font", "sans-serif");
+    mpv_set_option_string(m_mpv, "sub-font-size", "46");
+    mpv_set_option_string(m_mpv, "sub-color", "#FFFFFF");
+    mpv_set_option_string(m_mpv, "sub-border-color", "#000000");
+    mpv_set_option_string(m_mpv, "sub-border-size", "3");
+    mpv_set_option_string(m_mpv, "sub-shadow-color", "#000000");
+    mpv_set_option_string(m_mpv, "sub-shadow-offset", "2");
+    mpv_set_option_string(m_mpv, "sub-use-margins", "yes");
+    mpv_set_option_string(m_mpv, "sub-pos", m_subtitlesRaised ? "72" : "94");
 
     if (m_videoWindowId != 0) {
         qint64 wid = static_cast<qint64>(m_videoWindowId);
@@ -100,6 +111,13 @@ void MpvObject::processMpvEvents()
                 }
             }
         } else if (event->event_id == MPV_EVENT_FILE_LOADED) {
+            if (!m_pendingSubtitlePath.isEmpty()) {
+                const QByteArray subtitlePath = QFileInfo(m_pendingSubtitlePath).absoluteFilePath().toUtf8();
+                const char *subtitleArgs[] = { "sub-add", subtitlePath.constData(), "select", nullptr };
+                mpv_command(m_mpv, subtitleArgs);
+            }
+            m_pendingSubtitlePath.clear();
+
             if (m_hasDeferredSeekAfterLoad && m_deferredSeekAfterLoad > 0.0) {
                 const QByteArray seekPos = QByteArray::number(m_deferredSeekAfterLoad, 'f', 3);
                 const char *seekArgs[] = { "seek", seekPos.constData(), "absolute+exact", nullptr };
@@ -165,6 +183,17 @@ void MpvObject::playFile(const QString &filePath, double startPosition, double a
     if (filePath.isEmpty())
         return;
 
+    m_pendingSubtitlePath = matchingSubtitlePath(filePath);
+    const bool subtitlesAvailable = !m_pendingSubtitlePath.isEmpty();
+    if (m_subtitlesAvailable != subtitlesAvailable) {
+        m_subtitlesAvailable = subtitlesAvailable;
+        emit subtitlesAvailableChanged(m_subtitlesAvailable);
+    }
+    if (!m_subtitlesVisible) {
+        m_subtitlesVisible = true;
+        emit subtitlesVisibleChanged(m_subtitlesVisible);
+    }
+
     if (m_videoWindowId == 0) {
         m_pendingFilePath = filePath;
         m_pendingStartPosition = startPosition;
@@ -177,6 +206,8 @@ void MpvObject::playFile(const QString &filePath, double startPosition, double a
         return;
 
     setAudioDelay(audioDelay);
+    mpv_set_property_string(m_mpv, "sub-visibility", "yes");
+    applySubtitlePosition();
 
     const QByteArray utf8File = QFileInfo(filePath).absoluteFilePath().toUtf8();
     const char *loadArgs[] = { "loadfile", utf8File.constData(), "replace", nullptr };
@@ -230,6 +261,50 @@ void MpvObject::setAudioDelay(double seconds)
     }
 
     mpv_set_property(m_mpv, "audio-delay", MPV_FORMAT_DOUBLE, &m_audioDelay);
+}
+
+void MpvObject::disableSubtitles()
+{
+    if (!m_mpv || !m_subtitlesAvailable || !m_subtitlesVisible)
+        return;
+
+    m_subtitlesVisible = false;
+    mpv_set_property_string(m_mpv, "sub-visibility", "no");
+    emit subtitlesVisibleChanged(m_subtitlesVisible);
+}
+
+void MpvObject::setSubtitlesRaised(bool raised)
+{
+    if (m_subtitlesRaised == raised)
+        return;
+
+    m_subtitlesRaised = raised;
+    applySubtitlePosition();
+}
+
+void MpvObject::applySubtitlePosition()
+{
+    if (!m_mpv)
+        return;
+
+    mpv_set_property_string(m_mpv, "sub-pos", m_subtitlesRaised ? "72" : "94");
+}
+
+QString MpvObject::matchingSubtitlePath(const QString &filePath) const
+{
+    const QFileInfo videoInfo(filePath);
+    const QDir directory = videoInfo.absoluteDir();
+    const QString baseName = videoInfo.completeBaseName();
+
+    const QString lowerCasePath = directory.filePath(baseName + QStringLiteral(".srt"));
+    if (QFileInfo(lowerCasePath).isFile())
+        return lowerCasePath;
+
+    const QString upperCasePath = directory.filePath(baseName + QStringLiteral(".SRT"));
+    if (QFileInfo(upperCasePath).isFile())
+        return upperCasePath;
+
+    return {};
 }
 
 void MpvObject::seekRelative(double seconds)
@@ -339,6 +414,7 @@ void MpvObject::stop()
 
     m_hasPendingPlayback = false;
     m_pendingFilePath.clear();
+    m_pendingSubtitlePath.clear();
     m_pendingStartPosition = 0.0;
     m_hasDeferredSeekAfterLoad = false;
     m_deferredSeekAfterLoad = 0.0;
@@ -348,6 +424,14 @@ void MpvObject::stop()
     m_duration = 0.0;
     m_paused = false;
     m_audioDelay = 0.0;
+    if (m_subtitlesAvailable) {
+        m_subtitlesAvailable = false;
+        emit subtitlesAvailableChanged(m_subtitlesAvailable);
+    }
+    if (!m_subtitlesVisible) {
+        m_subtitlesVisible = true;
+        emit subtitlesVisibleChanged(m_subtitlesVisible);
+    }
     emitStateSnapshot();
 }
 
@@ -369,4 +453,14 @@ double MpvObject::duration() const
 double MpvObject::audioDelay() const
 {
     return m_audioDelay;
+}
+
+bool MpvObject::subtitlesAvailable() const
+{
+    return m_subtitlesAvailable;
+}
+
+bool MpvObject::subtitlesVisible() const
+{
+    return m_subtitlesVisible;
 }

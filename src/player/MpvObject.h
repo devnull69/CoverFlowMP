@@ -24,23 +24,31 @@ public:
     void stop();
     void setVideoWindow(uintptr_t wid);
     void setAudioDelay(double seconds);
+    void disableSubtitles();
+    void setSubtitlesRaised(bool raised);
 
     bool paused() const;
     double position() const;
     double duration() const;
     double audioDelay() const;
+    bool subtitlesAvailable() const;
+    bool subtitlesVisible() const;
 
 signals:
     void pausedChanged(bool paused);
     void positionChanged(double position);
     void durationChanged(double duration);
     void audioDelayChanged(double audioDelay);
+    void subtitlesAvailableChanged(bool available);
+    void subtitlesVisibleChanged(bool visible);
     void playbackFinished();
 
 private:
     bool ensureInitialized();
     void processMpvEvents();
     void emitStateSnapshot();
+    QString matchingSubtitlePath(const QString &filePath) const;
+    void applySubtitlePosition();
 
     mpv_handle *m_mpv = nullptr;
     QTimer m_eventTimer;
@@ -55,4 +63,8 @@ private:
     double m_position = 0.0;
     double m_duration = 0.0;
     double m_audioDelay = 0.0;
+    QString m_pendingSubtitlePath;
+    bool m_subtitlesAvailable = false;
+    bool m_subtitlesVisible = true;
+    bool m_subtitlesRaised = false;
 };
