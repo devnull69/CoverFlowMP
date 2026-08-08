@@ -87,6 +87,7 @@ Im Play-Modus läuft das Video normal.
 
 - `Leertaste`: Pause ein/aus
 - `B`: Zurück zum Browser
+- `U`: Externe SRT-Untertitel ein- oder ausblenden
 - `Ctrl`: Bei Serienfolgen mit vorhandener Nachfolge den Button `Nächste Folge abspielen` einblenden
 - `Enter`: Bei eingeblendetem Button zur nächsten Folge wechseln
 
@@ -112,6 +113,7 @@ Solange ein Video im Player geöffnet ist, fordert CoverFlowMP das System an, ke
 
 - `Leertaste`: Wiedergabe fortsetzen
 - `B`: Zurück zum Browser
+- `U`: Externe SRT-Untertitel ein- oder ausblenden
 - `Links`: 10 Sekunden zurück
 - `Rechts`: 10 Sekunden vor
 - `Shift` + `Links`: 5 Sekunden zurück
@@ -164,9 +166,9 @@ Wenn fuer ein Video noch keine Skip-Bereiche gespeichert sind, aber im gleichen 
 
 ### Audio-Verzögerung anpassen
 
-- `A`: Audio-Delay-Modus öffnen
+- `A`: Audio-Delay-Modus ein- oder ausschalten
 - Im Audio-Delay-Modus bewirken `Links` und `Rechts` jeweils `50 ms` früher bzw. später
-- `Esc`: Audio-Delay-Modus verlassen
+- `Esc`: Audio-Delay-Modus ebenfalls verlassen
 
 ## Resume-Dialog
 

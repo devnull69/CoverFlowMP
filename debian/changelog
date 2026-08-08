@@ -1,4 +1,4 @@
-coverflowmp (2.3.0) UNRELEASED; urgency=medium
+coverflowmp (2.3.1) UNRELEASED; urgency=medium
 
   * Initial release.
   * Add application icon and desktop integration
@@ -40,5 +40,6 @@ coverflowmp (2.3.0) UNRELEASED; urgency=medium
   * PLAY NEXT EPISODE saves current video time
   * Editable skip areas
   * Added SRT subtitles
+  * Made A and U keys toggle switched
 
- -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Fri, 07 Aug 2026 22:37:30 +0200
+ -- Thomas Theiner <devnull69@devnull69-VirtualBox>  Sat, 08 Aug 2026 10:00:31 +0200

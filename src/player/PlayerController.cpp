@@ -253,9 +253,9 @@ void PlayerController::setAudioDelay(double seconds)
     m_mpv->setAudioDelay(seconds);
 }
 
-void PlayerController::disableSubtitles()
+void PlayerController::toggleSubtitles()
 {
-    m_mpv->disableSubtitles();
+    m_mpv->toggleSubtitles();
 }
 
 void PlayerController::setSubtitlesRaised(bool raised)

@@ -713,7 +713,7 @@ Item {
         if (event.key === Qt.Key_U && !root.infoMode
                 && !appController.resumePromptVisible && !appController.skipImportPromptVisible
                 && !root.clearSkipDialogVisible && !root.messageDialogVisible) {
-            playerController.disableSubtitles()
+            playerController.toggleSubtitles()
             event.accepted = true
             return
         }
@@ -833,7 +833,7 @@ Item {
         }
 
         if (event.key === Qt.Key_A && playerController.paused && !appController.resumePromptVisible) {
-            root.audioDelayMode = true
+            root.audioDelayMode = !root.audioDelayMode
             event.accepted = true
             return
         }

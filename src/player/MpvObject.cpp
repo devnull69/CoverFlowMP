@@ -263,13 +263,13 @@ void MpvObject::setAudioDelay(double seconds)
     mpv_set_property(m_mpv, "audio-delay", MPV_FORMAT_DOUBLE, &m_audioDelay);
 }
 
-void MpvObject::disableSubtitles()
+void MpvObject::toggleSubtitles()
 {
-    if (!m_mpv || !m_subtitlesAvailable || !m_subtitlesVisible)
+    if (!m_mpv || !m_subtitlesAvailable)
         return;
 
-    m_subtitlesVisible = false;
-    mpv_set_property_string(m_mpv, "sub-visibility", "no");
+    m_subtitlesVisible = !m_subtitlesVisible;
+    mpv_set_property_string(m_mpv, "sub-visibility", m_subtitlesVisible ? "yes" : "no");
     emit subtitlesVisibleChanged(m_subtitlesVisible);
 }
 

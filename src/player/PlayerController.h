@@ -51,7 +51,7 @@ public:
     Q_INVOKABLE void stop();
     Q_INVOKABLE void attachToWindow(QObject *windowObject);
     Q_INVOKABLE void setAudioDelay(double seconds);
-    Q_INVOKABLE void disableSubtitles();
+    Q_INVOKABLE void toggleSubtitles();
     Q_INVOKABLE void setSubtitlesRaised(bool raised);
     void setSkipRanges(const QVector<SkipRange> &ranges);
     void setSkipHandlingEnabled(bool enabled);

@@ -24,7 +24,7 @@ public:
     void stop();
     void setVideoWindow(uintptr_t wid);
     void setAudioDelay(double seconds);
-    void disableSubtitles();
+    void toggleSubtitles();
     void setSubtitlesRaised(bool raised);
 
     bool paused() const;
